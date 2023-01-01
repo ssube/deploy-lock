@@ -1,6 +1,11 @@
-export type LockType = 'automation' | 'deploy' | 'freeze' | 'incident';
+export const LOCK_TYPES = {
+  automation: 'an automation run',
+  deploy: 'a deploy',
+  freeze: 'a change freeze',
+  incident: 'an incident',
+} as const;
 
-export const LOCK_TYPES: ReadonlyArray<LockType> = ['automation', 'deploy', 'freeze', 'incident'] as const;
+export type LockType = keyof typeof LOCK_TYPES;
 
 export interface LockCI {
   project: string;

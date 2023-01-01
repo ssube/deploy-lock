@@ -112,7 +112,7 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       'type': {
         type: 'string',
         require: true,
-        choices: LOCK_TYPES,
+        choices: Object.keys(LOCK_TYPES) as ReadonlyArray<LockType>,
       },
       'until': {
         type: 'string',
