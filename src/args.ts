@@ -28,6 +28,7 @@ export interface ParsedArgs {
   duration?: string;
   until?: string;
   recursive: boolean;
+  links: Array<string>;
 
   'env-cluster'?: string;
   'env-account'?: string;
@@ -80,6 +81,11 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       },
       'duration': {
         type: 'string',
+      },
+      'links': {
+        default: [] as Array<string>,
+        string: true,
+        type: 'array',
       },
       'path': {
         type: 'string',

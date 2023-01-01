@@ -13,7 +13,7 @@ export async function lockCommand(context: CommandContext) {
     return false;
   }
 
-  const data = buildLock(process.env);
+  const data = buildLock(args);
   const lock = await storage.set(args.path, data);
   logger.info({ lock, path: args.path }, 'created new lock');
   return true;

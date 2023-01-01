@@ -1,6 +1,8 @@
 /* eslint-disable camelcase */
 import { doesExist, mustDefault } from '@apextoaster/js-utils';
-import { LockData } from './lock.js';
+
+import { ParsedArgs } from './args.js';
+import { LockCI, LockData, LockEnv } from './lock.js';
 
 export function splitPath(path: string): Array<string> {
   const segments = path.split('/');
@@ -14,36 +16,61 @@ export function splitPath(path: string): Array<string> {
   return paths;
 }
 
-export function buildCI(env: typeof process.env): LockData['ci'] {
+export const ENV_UNSET = 'not found';
+
+export function buildCI(args: ParsedArgs, env: typeof process.env): LockCI | undefined {
   if (doesExist(env.GITLAB_CI)) {
     return {
-      project: '',
-      ref: '',
-      commit: '',
-      pipeline: '',
-      job: '',
+      project: mustDefault(args['ci-project'], env.CI_PROJECT_PATH, ENV_UNSET),
+      ref: mustDefault(args['ci-ref'], env.CI_COMMIT_REF_SLUG, ENV_UNSET),
+      commit: mustDefault(args['ci-commit'], env.CI_COMMIT_SHA, ENV_UNSET),
+      pipeline: mustDefault(args['ci-pipeline'], env.CI_PIPELINE_ID, ENV_UNSET),
+      job: mustDefault(args['ci-job'], env.CI_JOB_ID, ENV_UNSET),
     };
   }
 
   return undefined;
 }
 
-export function buildEnv(env: typeof process.env): LockData['env'] {
+export function buildEnv(args: ParsedArgs, env: typeof process.env): LockEnv {
   return {
-    cluster: '',
-    account: '',
+    cluster: mustDefault(args['env-cluster'], env.CLUSTER_NAME, ENV_UNSET),
+    account: mustDefault(args['env-account'], env.DEPLOY_ENV, ENV_UNSET),
+    target: mustDefault(args['env-target'], env.DEPLOY_TARGET, ENV_UNSET),
   };
 }
 
-export function buildLock(env = process.env): LockData {
+export function buildAuthor(args: ParsedArgs, env: typeof process.env): string {
+  if (doesExist(env.GITLAB_CI)) {
+    return mustDefault(args.author, env.GITLAB_USER_EMAIL, env.USER);
+  }
+
+  return mustDefault(args.author, env.USER);
+}
+
+export function buildLinks(args: ParsedArgs): Record<string, string> {
+  const links: Record<string, string> = {};
+
+  for (const link of args.links) {
+    const match = /^([-a-z]+):(.+)$/.exec(link);
+    if (doesExist(match)) {
+      const [_full, name, url] = Array.from(match);
+      links[name] = url;
+    }
+  }
+
+  return links;
+}
+
+export function buildLock(args: ParsedArgs, env = process.env): LockData {
   return {
-    type: 'deploy',
-    author: mustDefault(env.USER, ''),
-    links: {},
+    type: mustDefault(args.type, 'deploy'),
+    author: buildAuthor(args, env),
+    links: buildLinks(args),
     created_at: 0,
     updated_at: 0,
     expires_at: 0,
-    env: buildEnv(env),
-    ci: buildCI(env),
+    env: buildEnv(args, env),
+    ci: buildCI(args, env),
   };
 }

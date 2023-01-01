@@ -1,5 +1,6 @@
 import { doesExist } from '@apextoaster/js-utils';
 import { LockData } from '../lock.js';
+import { buildLock } from '../utils.js';
 import { Storage, StorageContext } from './index.js';
 
 export async function connectMemory(context: StorageContext): Promise<Storage> {
@@ -9,10 +10,11 @@ export async function connectMemory(context: StorageContext): Promise<Storage> {
     const match = /^([-a-z/]+):({.+})$/.exec(lock);
     if (doesExist(match)) {
       const [_full, path, rawData] = Array.from(match);
+      const base = buildLock(context.args); // TODO: remove this
       const data = JSON.parse(rawData) as LockData;
 
       context.logger.info({ path, data }, 'assuming lock exists');
-      storage.set(path, data);
+      storage.set(path, Object.assign(base, data));
     } else {
       context.logger.warn({ lock }, 'invalid lock in assume');
     }
