@@ -62,6 +62,9 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
   const parser = yargs(argv)
     .usage(`Usage: ${APP_NAME} <command> [options]`)
     .command('check', 'check if a lock exists')
+    .command('list', 'list all locks', () => { /* noop */}, () => {
+      command = 'list';
+    })
     .command('lock', 'lock a path', () => { /* noop */}, () => {
       command = 'lock';
     })

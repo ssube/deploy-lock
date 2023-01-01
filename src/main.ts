@@ -20,6 +20,7 @@ export enum ExitCode {
 
 export const Commands: Record<CommandName, CommandFunction> = {
   check: checkCommand,
+  list: checkCommand, // TODO: implement list
   lock: lockCommand,
   unlock: unlockCommand,
   prune: pruneCommand,
