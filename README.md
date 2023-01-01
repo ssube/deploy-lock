@@ -335,7 +335,13 @@ Friendly strings for `type`:
       1. for CI: `[gitlab, $GITLAB_USER_NAME]`
       2. for an incident: `[first-responder, incident-commander]`
    3. Each author has to `unlock` before the lock is removed/released
-5. Should `LockData.env` be a string/array, like `.path`?
+5. Should `LockData.env` be a string/array, like `LockData.path`?
+   1. Very probably yes, because otherwise it will need `env.cloud`, `env.network`, etc, and those
+      are not always predictable/present.
+6. Should there be an `--allow`/`LockData.allow` field?
+   1. When running `check --type`, if `LockData.allow` includes `--type`, it will be allowed
+      1. `freeze` should allow `automation`, but not `deploy`
+      2. `incident` could allow `deploy`, but not `automation`
 
 ### Testing
 
