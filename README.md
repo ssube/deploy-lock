@@ -241,12 +241,14 @@ Friendly strings for `type`:
 - `--duration`
   - string
   - duration of lock, relative to now
+  - may be given in epoch seconds (`\d+`), as an ISO-8601 date, or a human interval (`30m`)
   - mutually exclusive with `--until`
 - `--link`
   - array, strings
 - `--until`
   - string, timestamp
   - duration of lock, absolute
+  - may be given in epoch seconds (`\d+`) or as an ISO-8601 date (intervals are not allowed)
   - mutually exclusive with `--duration`
 - `--env-cluster`
   - string, enum
@@ -302,7 +304,7 @@ Friendly strings for `type`:
 - `--fake`
   - string, optional
   - a fake lock that should be added to the in-memory data store
-  - the in-memory data store always starts empty
+  - the in-memory data store always starts empty, this is the only way to have an existing lock
 
 ### REST API
 
@@ -312,12 +314,12 @@ Friendly strings for `type`:
   - equivalent to `deploy-lock list`
 - `/locks DELETE`
   - equivalent to `deploy-lock prune`
-- `/locks/:path DELETE`
-  - equivalent to `deploy-lock unlock`
 - `/locks/:path GET`
   - equivalent to `deploy-lock check`
 - `/locks/:path PUT`
   - equivalent to `deploy-lock lock`
+- `/locks/:path DELETE`
+  - equivalent to `deploy-lock unlock`
 
 ### Questions
 
