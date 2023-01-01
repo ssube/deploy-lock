@@ -8,14 +8,14 @@ restarting pods during an infrastructure incident.
 - [Deploy Lock](#deploy-lock)
   - [Contents](#contents)
   - [Abstract](#abstract)
-    - [Deploy Path](#deploy-path)
-    - [Lock Data](#lock-data)
-    - [Messaging](#messaging)
-      - [Friendly Types](#friendly-types)
     - [Example Usage](#example-usage)
       - [Prevent a deploy during an automation run](#prevent-a-deploy-during-an-automation-run)
       - [Prevent a deploy during a production incident](#prevent-a-deploy-during-a-production-incident)
       - [Prevent duplicate deploys of the same service from conflicting](#prevent-duplicate-deploys-of-the-same-service-from-conflicting)
+    - [Deploy Path](#deploy-path)
+    - [Lock Data](#lock-data)
+    - [Messaging](#messaging)
+      - [Friendly Types](#friendly-types)
     - [Command-line Interface](#command-line-interface)
       - [Basic Options](#basic-options)
       - [Lock Data Options](#lock-data-options)
@@ -26,97 +26,6 @@ restarting pods during an infrastructure incident.
     - [Testing](#testing)
 
 ## Abstract
-
-### Deploy Path
-
-The path to a service, starting with the cluster and environment: `apps/staging/a/auth-app`.
-
-Path components may include:
-
-- cluster
-- env (`account`)
-- target
-- service (namespace)
-- branch (`ref`)
-
-When _locking_ a path, only the leaf path is locked, not parents.
-
-When _checking_ a path, each segment is checked recursively, so a lock at `apps/staging` will prevent all services
-from being deployed into both the `apps/staging/a` and `apps/staging/b` clusters.
-
-- cluster comes first because that is how we structure the git repositories (repo = cluster, branch = env)
-- to lock multiple clusters in the same environment, run the command repeatedly with the same lock data
-- to lock a specific branch, put it in the path: `apps/staging/a/auth-app/main`
-
-Ultimately, the deploy path's layout should follow the hierarchy of resources that you want to lock. One potential
-order, for a multi-cloud Kubernetes architecture, is:
-
-- cloud
-- account
-- region
-- network
-- cluster
-- namespace
-- resource name
-
-Such as `aws/staging/us-east-1/apps/a/auth-app/api` or `gcp/production/us-east4-a/tools/gitlab/runner/ci`.
-
-Including the region in the path can be limiting, but also allows locking an entire provider-region in case of serious
-upstream incidents.
-
-### Lock Data
-
-Each lock must contain the following fields:
-
-```typescript
-interface Lock {
-  type: 'automation' | 'deploy' | 'freeze' | 'incident' | 'maintenance;
-  author: string;
-  links: Map<string, string>;
-
-  // Timestamps, calculated from --duration and --until
-  created_at: number;
-  updated_at: number;
-  expires_at: number;
-
-  // Env fields
-  // often duplicates of path, but useful for cross-project locks
-  env: {
-    cluster: string;
-    account: string;
-    target?: string; // optional
-  }
-
-  // CI fields, optional
-  ci?: {
-    project: string;
-    ref: string;
-    commit: string;
-    pipeline: string;
-    job: string;
-  }
-}
-```
-
-If `$CI` is not set, the `ci` sub-struct will not be present.
-
-### Messaging
-
-- create a new lock: 'locked ${path} for ${type:friendly} until ${expires_at:datetime}'
-  - > Locked `apps/acceptance/a` for a deploy until Sat 31 Dec, 12:00
-  - > Locked `gitlab/production` for an incident until Sat 31 Dec, 12:00
-- error, existing lock: 'error: ${path} is locked until ${expires_at:datetime} by ${type:friendly} in ${cluster}/${env}'
-  - > Error: `apps/acceptance` is locked until Sat 31 Dec, 12:00 by an automation run in `testing/staging`.
-
-#### Friendly Types
-
-Friendly strings for `type`:
-
-- `automation`: `An automation run`
-- `deploy`: `A deploy`
-- `freeze`: `A release freeze`
-- `incident`: `An incident`
-- `maintenance`: `A maintenance window`
 
 ### Example Usage
 
@@ -190,6 +99,97 @@ a service without ephemeral environments/branch switching.
 4. Second deploy job can be retried
    1. No lock, runs normally
 
+### Deploy Path
+
+The path to a service, starting with the cluster and environment: `apps/staging/a/auth-app`.
+
+Path components may include:
+
+- cluster
+- env (`account`)
+- target
+- service (namespace)
+- branch (`ref`)
+
+When _locking_ a path, only the leaf path is locked, not parents.
+
+When _checking_ a path, each segment is checked recursively, so a lock at `apps/staging` will prevent all services
+from being deployed into both the `apps/staging/a` and `apps/staging/b` clusters.
+
+- cluster comes first because that is how we structure the git repositories (repo = cluster, branch = env)
+- to lock multiple clusters in the same environment, run the command repeatedly with the same lock data
+- to lock a specific branch, put it in the path: `apps/staging/a/auth-app/main`
+
+Ultimately, the deploy path's layout should follow the hierarchy of resources that you want to lock. One potential
+order, for a multi-cloud Kubernetes architecture, is:
+
+- cloud
+- account
+- region
+- network
+- cluster
+- namespace
+- resource name
+
+Such as `aws/staging/us-east-1/apps/a/auth-app/api` or `gcp/production/us-east4-a/tools/gitlab/runner/ci`.
+
+Including the region in the path can be limiting, but also allows locking an entire provider-region in case of serious
+upstream incidents.
+
+### Lock Data
+
+Each lock must contain the following fields:
+
+```typescript
+interface Lock {
+  type: 'automation' | 'deploy' | 'freeze' | 'incident' | 'maintenance';
+  author: string;
+  links: Map<string, string>;
+
+  // Timestamps, calculated from --duration and --until
+  created_at: number;
+  updated_at: number;
+  expires_at: number;
+
+  // Env fields
+  // often duplicates of path, but useful for cross-project locks
+  env: {
+    cluster: string;
+    account: string;
+    target?: string; // optional
+  }
+
+  // CI fields, optional
+  ci?: {
+    project: string;
+    ref: string;
+    commit: string;
+    pipeline: string;
+    job: string;
+  }
+}
+```
+
+If `$CI` is not set, the `ci` sub-struct will not be present.
+
+### Messaging
+
+- create a new lock: `locked ${path} for ${type:friendly} until ${expires_at:datetime}`
+  - > Locked `apps/acceptance/a` for a deploy until Sat 31 Dec, 12:00
+  - > Locked `gitlab/production` for an incident until Sat 31 Dec, 12:00
+- error, existing lock: `error: ${path} is locked until ${expires_at:datetime} by ${type:friendly} in ${cluster}/${env}`
+  - > Error: `apps/acceptance` is locked until Sat 31 Dec, 12:00 by an automation run in `testing/staging`.
+
+#### Friendly Types
+
+Friendly strings for `type`:
+
+- `automation`: `An automation run`
+- `deploy`: `A deploy`
+- `freeze`: `A release freeze`
+- `incident`: `An incident`
+- `maintenance`: `A maintenance window`
+
 ### Command-line Interface
 
 ```shell
@@ -206,10 +206,13 @@ a service without ephemeral environments/branch switching.
 > deploy-lock list --path apps/staging    # list all locks within the apps/staging path
 
 > deploy-lock prune --path apps/staging   # prune expired locks within the path
+> deploy-lock prune --path apps/staging --now future-date   # prune locks that will expire by --now
 ```
 
 #### Basic Options
 
+- command
+  - one of `check`, `list`, `lock`, `prune`, `unlock`
 - `--now`
   - number, optional
   - defaults to current epoch time
@@ -226,7 +229,7 @@ a service without ephemeral environments/branch switching.
 - `--type`
   - string, enum
   - type of lock
-  - one of `automation`, `deploy`, or `incident`
+  - one of `automation`, `deploy`, `freeze`, `incident`, or `maintenance`
 
 #### Lock Data Options
 
