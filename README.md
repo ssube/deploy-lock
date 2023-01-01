@@ -1,7 +1,7 @@
 # Deploy Lock
 
 This is a tool to lock a cluster or service, in order to prevent people from deploying changes during test automation or
-an infrastructure incident.
+restarting pods during an infrastructure incident.
 
 ## Contents
 
@@ -11,6 +11,7 @@ an infrastructure incident.
     - [Deploy Path](#deploy-path)
     - [Lock Data](#lock-data)
     - [Messaging](#messaging)
+      - [Friendly Types](#friendly-types)
     - [Example Usage](#example-usage)
       - [Prevent a deploy during an automation run](#prevent-a-deploy-during-an-automation-run)
       - [Prevent a deploy during a production incident](#prevent-a-deploy-during-a-production-incident)
@@ -30,7 +31,7 @@ an infrastructure incident.
 
 The path to a service, starting with the cluster and environment: `apps/staging/a/auth-app`.
 
-Components:
+Path components may include:
 
 - cluster
 - env (`account`)
@@ -38,25 +39,30 @@ Components:
 - service (namespace)
 - branch (`ref`)
 
-When _locking_ a path, only the full path is locked, not parents.
+When _locking_ a path, only the leaf path is locked, not parents.
 
 When _checking_ a path, each segment is checked recursively, so a lock at `apps/staging` will prevent all services
-from being deployed into both the A and B clusters.
+from being deployed into both the `apps/staging/a` and `apps/staging/b` clusters.
 
 - cluster comes first because that is how we structure the git repositories (repo = cluster, branch = env)
 - to lock multiple clusters in the same environment, run the command repeatedly with the same lock data
 - to lock a specific branch, put it in the path: `apps/staging/a/auth-app/main`
 
-Ultimately, the deploy path's layout should follow the hierarchy of resources that you may want to lock. One potential
-order is:
+Ultimately, the deploy path's layout should follow the hierarchy of resources that you want to lock. One potential
+order, for a multi-cloud Kubernetes architecture, is:
 
 - cloud
 - account
+- region
 - network
 - cluster
 - namespace
+- resource name
 
-Such as `aws/staging/apps/a/auth-app` or `gcp/production/build/gitlab/runner`.
+Such as `aws/staging/us-east-1/apps/a/auth-app/api` or `gcp/production/us-east4-a/tools/gitlab/runner/ci`.
+
+Including the region in the path can be limiting, but also allows locking an entire provider-region in case of serious
+upstream incidents.
 
 ### Lock Data
 
@@ -64,7 +70,7 @@ Each lock must contain the following fields:
 
 ```typescript
 interface Lock {
-  type: 'automation' | 'deploy' | 'incident';
+  type: 'automation' | 'deploy' | 'freeze' | 'incident' | 'maintenance;
   author: string;
   links: Map<string, string>;
 
@@ -92,8 +98,6 @@ interface Lock {
 }
 ```
 
-Friendly strings for `type`: `An automation run`, `A deploy`, `An incident`.
-
 If `$CI` is not set, the `ci` sub-struct will not be present.
 
 ### Messaging
@@ -103,6 +107,16 @@ If `$CI` is not set, the `ci` sub-struct will not be present.
   - > Locked `gitlab/production` for an incident until Sat 31 Dec, 12:00
 - error, existing lock: 'error: ${path} is locked until ${expires_at:datetime} by ${type:friendly} in ${cluster}/${env}'
   - > Error: `apps/acceptance` is locked until Sat 31 Dec, 12:00 by an automation run in `testing/staging`.
+
+#### Friendly Types
+
+Friendly strings for `type`:
+
+- `automation`: `An automation run`
+- `deploy`: `A deploy`
+- `freeze`: `A release freeze`
+- `incident`: `An incident`
+- `maintenance`: `A maintenance window`
 
 ### Example Usage
 
