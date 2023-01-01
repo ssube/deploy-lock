@@ -1,0 +1,52 @@
+{
+  "name": "deploy-lock",
+  "version": "0.1.0",
+  "description": "Deploy lock tool",
+  "main": "out/src/index.js",
+  "author": "Sean Sube <seansube@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@apextoaster/js-utils": "^0.5.0",
+    "aws-sdk": "^2.1286.0",
+    "bunyan": "^1.8.15",
+    "noicejs": "^5.0.0-3",
+    "yargs": "^17.6.2"
+  },
+  "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@microsoft/api-documenter": "^7.19.26",
+    "@microsoft/api-extractor": "^7.33.7",
+    "@mochajs/multi-reporter": "^1.1.0",
+    "@types/bunyan": "^1.8.8",
+    "@types/chai-as-promised": "^7.1.5",
+    "@types/mocha": "^10.0.1",
+    "@types/sinon-chai": "^3.2.9",
+    "@types/yargs": "^17.0.17",
+    "@typescript-eslint/eslint-plugin": "^5.46.1",
+    "@typescript-eslint/parser": "^5.46.1",
+    "c8": "^7.12.0",
+    "chai": "^4.3.7",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^8.29.0",
+    "eslint-plugin-chai": "^0.0.1",
+    "eslint-plugin-chai-expect": "^3.0.0",
+    "eslint-plugin-chai-expect-keywords": "^2.1.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-mocha": "^10.1.0",
+    "eslint-plugin-no-null": "^1.0.2",
+    "eslint-plugin-sonarjs": "^0.17.0",
+    "fast-check": "^3.4.0",
+    "mocha": "^10.2.0",
+    "mocha-foam": "^0.1.10",
+    "mocha-junit-reporter": "^2.2.0",
+    "sinon": "^15.0.0",
+    "sinon-chai": "^3.7.0",
+    "source-map-support": "^0.5.21",
+    "tslib": "^2.4.1",
+    "typescript": "^4.9.4"
+  },
+  "nyc": {
+    "extends": "@istanbuljs/nyc-config-typescript"
+  }
+}
