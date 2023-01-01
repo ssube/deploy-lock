@@ -1,0 +1,268 @@
+# Deploy Lock
+
+This is a tool to lock a cluster or service, in order to prevent people from deploying changes during test automation or
+an infrastructure incident.
+
+## Contents
+
+- [Deploy Lock](#deploy-lock)
+  - [Contents](#contents)
+  - [Abstract](#abstract)
+    - [Deploy Path](#deploy-path)
+    - [Lock Data](#lock-data)
+    - [Messaging](#messaging)
+    - [Example Usage](#example-usage)
+      - [Prevent a deploy during an automation run](#prevent-a-deploy-during-an-automation-run)
+      - [Prevent a deploy during a production incident](#prevent-a-deploy-during-a-production-incident)
+      - [Prevent duplicate deploys of the same service from conflicting](#prevent-duplicate-deploys-of-the-same-service-from-conflicting)
+    - [Command-line Interface](#command-line-interface)
+      - [User Options](#user-options)
+      - [Backend Options](#backend-options)
+    - [REST API](#rest-api)
+      - [Endpoints](#endpoints)
+
+## Abstract
+
+### Deploy Path
+
+The path to a service, starting with the cluster and environment: `apps/staging/a/auth-app`.
+
+Components:
+
+- cluster
+- env (`account`)
+- target
+- service (namespace)
+- branch (`ref`)
+
+When _locking_ a path, only the full path is locked, not parents.
+
+When _checking_ a path, each segment is checked recursively, so a lock at `apps/staging` will prevent all services
+from being deployed into both the A and B clusters.
+
+- cluster comes first because that is how we structure the git repositories (repo = cluster, branch = env)
+- to lock multiple clusters in the same environment, run the command repeatedly with the same lock data
+- to lock a specific branch, put it in the path: `apps/staging/a/auth-app/main`
+
+TODO: should the service name (component 3) map to the kubernetes namespace rather than the service?
+
+### Lock Data
+
+Each lock must contain the following fields:
+
+```typescript
+interface Lock {
+  type: 'automation' | 'deploy' | 'incident';
+  author: string;
+  links: Map<string, string>;
+
+  // Timestamps, calculated from --duration and --until
+  created_at: number;
+  updated_at: number;
+  expires_at: number;
+
+  // Env fields
+  // often duplicates of path, but useful for cross-project locks
+  env: {
+    cluster: string;
+    account: string;
+    target?: string; // optional
+  }
+
+  // CI fields, optional
+  ci?: {
+    project: string;
+    ref: string;
+    commit: string;
+    pipeline: string;
+    job: string;
+  }
+}
+```
+
+Friendly strings for `type`: `An automation run`, `A deploy`, `An incident`.
+
+If `$CI` is not set, the `ci` sub-struct will not be present.
+
+TODO: should there be a `type` for `A release freeze` (`freeze`)?
+
+### Messaging
+
+- create a new lock: 'locked ${path} for ${type:friendly} until ${expires_at:datetime}'
+  - > Locked `apps/acceptance/a` for a deploy until Sat 31 Dec, 12:00
+  - > Locked `gitlab/production` for an incident until Sat 31 Dec, 12:00
+- error, existing lock: 'error: ${path} is locked until ${expires_at:datetime} by ${type:friendly} in ${cluster}/${env}'
+  - > Error: `apps/acceptance` is locked until Sat 31 Dec, 12:00 by an automation run in `testing/staging`.
+
+### Example Usage
+
+#### Prevent a deploy during an automation run
+
+This would be used to prevent an application deploy during a test automation run, to make sure the application does not
+restart or change versions and invalidate the test results.
+
+1. QA starts an automation run
+   1. Automation calls `deploy-lock lock apps/acceptance --type automation --duration 90m`
+2. Someone merges code into `develop` of `saas-app`
+   1. The `saas-app` pipeline runs a deploy job
+   2. The deploy job calls `deploy-lock check apps/acceptance/a/saas-app/develop`, which recursively checks:
+      1. `apps`
+      2. `apps/acceptance`
+         1. locked by automation, exit with an error
+      3. `apps/acceptance/a`
+      4. `apps/acceptance/a/saas-app`
+      5. `apps/acceptance/a/saas-app/develop`
+   3. Deploy job exits with an error, _does not_ deploy
+3. Automation pipeline ends
+   1. Final job calls `deploy-lock unlock apps/acceptance --type automation`
+      1. Specifying the `--type` during `unlock` prevents automation/deploy jobs from accidentally removing an incident
+   2. If the final automation job does not run, the lock will still expire after 90 minutes (`--duration`)
+4. Retry `saas-app` deploy job
+   1. No lock, runs normally
+
+#### Prevent a deploy during a production incident
+
+This would be used to prevent an application deploy during an infrastructure outage, to make sure existing pods
+continue running.
+
+1. DevOps receives an alert and declares an incident for the `apps/production/a` cluster
+2. The first responder runs `deploy-lock lock apps/production --type incident --duration 6h`
+   1. This locks _both_ production clusters while we shift traffic to the working one
+3. Someone merges code into `main` of `auth-app`
+   1. The `auth-app` pipeline runs a deploy job
+   2. The deploy job calls `deploy-lock check apps/production/a/auth-app`, which recursively checks:
+      1. `apps`
+      2. `apps/production`
+         1. locked by incident, exit with an error
+      3. `apps/production/a`
+      4. `apps/production/a/auth-app`
+   3. Deploy job exits with an error, _does not_ deploy
+4. Incident is resolved
+   1. First responder runs `deploy-lock unlock apps/production --type incident`
+5. Retry `auth-app` deploy job
+   1. No lock, runs normally
+
+#### Prevent duplicate deploys of the same service from conflicting
+
+This would be used to prevent multiple simultaneous deploys of the same project from conflicting with one another, in
+a service without ephemeral environments/branch switching.
+
+1. Someone starts a pipeline on `feature/foo` of `chat-app`
+   1. The `chat-app` pipeline runs a deploy job
+   2. The deploy job calls `deploy-lock lock apps/staging/a/chat-app`
+2. Someone else starts a pipeline on `feature/bar` of `chat-app`
+   1. The `chat-app` pipeline runs another deploy job
+      1. The first one has not finished and is still mid-rollout
+   2. The second deploy job calls `deploy-lock lock apps/staging/a/chat-app`, which recursively checks:
+      1. `apps`
+      2. `apps/staging`
+      3. `apps/staging/a`
+      4. `apps/staging/a/chat-app`
+         1. locked by deploy, exit with an error
+      5. `lock` implies `check`
+   3. Second deploy job fails with an error, _does not_ deploy
+3. First deploy succeeds
+   1. Deploy job calls `deploy-lock unlock apps/staging/a/chat-app`
+4. Second deploy job can be retried
+   1. No lock, runs normally
+
+### Command-line Interface
+
+```shell
+> deploy-lock lock --path apps/staging --type automation --duration 60m
+> deploy-lock lock --path apps/staging/a/auth-app --type deploy --duration 5m
+> deploy-lock lock --path apps/staging --until 2022-12-31T12:00   # local TZ, unless Z specified
+
+> deploy-lock unlock --path apps/staging --type automation    # unlock type must match lock type
+
+> deploy-lock check --path apps/staging/a/auth-app   # is equivalent to
+> deploy-lock check --path apps/staging --path apps/staging/a --path apps/staging/a/auth-app
+> deploy-lock check --path apps/staging/a/auth-app --recursive=false   # only checks the leaf node
+
+> deploy-lock prune --path apps/staging   # prune expired locks within the path
+```
+
+#### User Options
+
+- `--type`
+  - string, enum
+  - type of lock
+  - one of `automation`, `deploy`, or `incident`
+- `--path`
+  - array, strings
+  - record paths
+  - always lowercase (force in code)
+  - `/^[-a-z\/]+$/`
+- `--author`
+  - string
+  - defaults to `$GITLAB_USER_EMAIL` if `$GITLAB_CI` is set
+  - defaults to `$USER` otherwise
+- `--duration`
+  - number
+  - duration of lock, relative to now
+  - mutually exclusive with `--until`
+- `--until`
+  - string, timestamp
+  - duration of lock, absolute
+  - mutually exclusive with `--duration`
+- `--recursive`
+  - boolean
+  - recursively check locks
+  - defaults to true for `check`
+  - defaults to false for `lock`, `unlock`
+- `--env-cluster`
+  - string, enum
+  - defaults to `$CLUSTER_NAME` if set
+  - defaults to `--path.split.0` otherwise
+- `--env-account`
+  - string, enum
+  - defaults to `$DEPLOY_ENV` if set
+  - defaults to `--path.split.1` otherwise
+- `--env-target`
+  - optional string
+  - `/^[a-z]$/`
+  - defaults to `$DEPLOY_TARGET` if set
+  - defaults to `--path.split.2` otherwise
+- `--ci-project`
+  - optional string
+  - project path
+  - defaults to `$CI_PROJECT_PATH` if set
+  - defaults to `--path.split.3` otherwise
+- `--ci-ref`
+  - optional string
+  - branch or tag
+  - defaults to `$CI_COMMIT_REF_SLUG` if set
+  - defaults to `--path.split.4` otherwise
+- `--ci-commit`
+  - optional string
+  - SHA of ref
+  - defaults to `$CI_COMMIT_SHA` if set
+- `--ci-pipeline`
+  - optional string
+  - pipeline ID
+  - defaults to `$CI_PIPELINE_ID` if set
+- `--ci-job`
+  - optional string
+  - job ID
+  - defaults to `$CI_JOB_ID` if set
+
+TODO: should there be an `update` or `replace` command?
+
+TODO: should `--recursive` be available for `lock` or only `unlock`? A recursive lock would write multiple records
+
+#### Backend Options
+
+- `--storage`
+  - string
+  - one of `dynamodb`, `memory`
+- `--table`
+  - string
+  - DynamoDB table name
+
+### REST API
+
+#### Endpoints
+
+- `/locks GET`
+- `/locks POST`
+- `/locks/:path GET`?
