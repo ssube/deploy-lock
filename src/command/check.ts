@@ -1,7 +1,7 @@
 import { doesExist } from '@apextoaster/js-utils';
 import { ParsedArgs } from '../args.js';
 
-import { printLock, splitPath } from '../utils.js';
+import { printLock, walkPath } from '../utils.js';
 import { CommandContext } from './index.js';
 
 export async function checkCommand(context: CommandContext) {
@@ -32,7 +32,7 @@ export async function checkCommand(context: CommandContext) {
 
 export function getCheckPaths(args: ParsedArgs): Array<string> {
   if (args.recursive) {
-    return splitPath(args.path);
+    return walkPath(args.path);
   } else {
     return [args.path];
   }

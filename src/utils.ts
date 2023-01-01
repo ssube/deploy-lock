@@ -1,22 +1,43 @@
 /* eslint-disable camelcase */
-import { doesExist, mustDefault } from '@apextoaster/js-utils';
+import { doesExist, InvalidArgumentError, mustDefault } from '@apextoaster/js-utils';
 
 import { ParsedArgs } from './args.js';
 import { LOCK_TYPES, LockCI, LockData, LockEnv } from './lock.js';
 
+export function matchPath(baseStr: string, otherStr: string): boolean {
+  const base = splitPath(baseStr);
+  const other = splitPath(otherStr);
+
+  if (other.length < base.length) {
+    return false;
+  }
+
+  for (let i = 0; i <= base.length; ++i) {
+    if (base[i] !== other[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function splitPath(path: string): Array<string> {
-  const segments = path.split('/');
+  return path.toLowerCase().split('/').map((part) => part.trim()).filter((part) => part.length > 0);
+}
+
+export function walkPath(path: string, start = 0): Array<string> {
+  const segments = splitPath(path);
 
   const paths = [];
-  for (let i = 1; i <= segments.length; ++i) {
-    const next = segments.slice(0, i).join('/');
+  for (let i = (start + 1); i <= segments.length; ++i) {
+    const next = segments.slice(start, i).join('/');
     paths.push(next);
   }
 
   return paths;
 }
 
-export const ENV_UNSET = 'not found';
+export const ENV_UNSET = 'not set';
 
 export function buildCI(args: ParsedArgs, env: typeof process.env): LockCI | undefined {
   if (doesExist(env.GITLAB_CI)) {
@@ -68,9 +89,9 @@ export function buildLock(args: ParsedArgs, env = process.env): LockData {
     path: args.path,
     author: buildAuthor(args, env),
     links: buildLinks(args),
-    created_at: 0,
-    updated_at: 0,
-    expires_at: 0,
+    created_at: args.now,
+    updated_at: args.now,
+    expires_at: calculateExpires(args),
     env: buildEnv(args, env),
     ci: buildCI(args, env),
   };
@@ -79,4 +100,27 @@ export function buildLock(args: ParsedArgs, env = process.env): LockData {
 export function printLock(path: string, data: LockData): string {
   const friendlyType = LOCK_TYPES[data.type];
   return `${path} is locked until ${data.expires_at} by ${friendlyType} in ${data.env.cluster}`;
+}
+
+export function calculateExpires(args: ParsedArgs): number {
+  if (doesExist(args.until)) {
+    return parseTime(args.until);
+  }
+
+  if (doesExist(args.duration)) {
+    return args.now + parseTime(args.duration);
+  }
+
+  throw new InvalidArgumentError('must provide either duration or until');
+}
+
+/**
+ * Convert a string of the form `12345` or `15m` into seconds.
+ */
+export function parseTime(time: string): number {
+  if (/\d+/.test(time)) {
+    return parseInt(time, 10);
+  }
+
+  throw new InvalidArgumentError('invalid time');
 }

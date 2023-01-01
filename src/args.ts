@@ -29,6 +29,7 @@ export interface ParsedArgs {
   until?: string;
   recursive: boolean;
   links: Array<string>;
+  now: number;
 
   'env-cluster'?: string;
   'env-account'?: string;
@@ -89,6 +90,10 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
         default: [] as Array<string>,
         string: true,
         type: 'array',
+      },
+      'now': {
+        type: 'number',
+        default: Date.now(),
       },
       'path': {
         type: 'string',

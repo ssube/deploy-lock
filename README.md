@@ -22,6 +22,7 @@ an infrastructure incident.
     - [REST API](#rest-api)
       - [Endpoints](#endpoints)
     - [Questions](#questions)
+    - [Testing](#testing)
 
 ## Abstract
 
@@ -195,16 +196,9 @@ a service without ephemeral environments/branch switching.
 
 #### Basic Options
 
-- `--author`
-  - string
-  - defaults to `$GITLAB_USER_EMAIL` if `$GITLAB_CI` is set
-  - defaults to `$USER` otherwise
-- `--duration`
-  - number
-  - duration of lock, relative to now
-  - mutually exclusive with `--until`
-- `--link`
-  - array, strings
+- `--now`
+  - number, optional
+  - defaults to current epoch time
 - `--path`
   - array, strings
   - record paths
@@ -219,13 +213,23 @@ a service without ephemeral environments/branch switching.
   - string, enum
   - type of lock
   - one of `automation`, `deploy`, or `incident`
+
+#### Lock Data Options
+
+- `--author`
+  - string
+  - defaults to `$GITLAB_USER_EMAIL` if `$GITLAB_CI` is set
+  - defaults to `$USER` otherwise
+- `--duration`
+  - string
+  - duration of lock, relative to now
+  - mutually exclusive with `--until`
+- `--link`
+  - array, strings
 - `--until`
   - string, timestamp
   - duration of lock, absolute
   - mutually exclusive with `--duration`
-
-#### Lock Data Options
-
 - `--env-cluster`
   - string, enum
   - defaults to `$CLUSTER_NAME` if set
@@ -310,3 +314,13 @@ a service without ephemeral environments/branch switching.
       1. for CI: `[gitlab, $GITLAB_USER_NAME]`
       2. for incident: `[first-responder, incident-commander]`
    3. Each author has to `unlock` before the lock is removed/released
+
+### Testing
+
+1. Launch DynamoDB Local with `podman run --rm -p 8000:8000 docker.io/amazon/dynamodb-local`
+2. Create a profile with `aws configure --profile localddb`
+   1. placeholder tokens (`foo` and `bar` is fine)
+   2. us-east-1 region
+   3. json output
+3. Create a `locks` table with `aws dynamodb --endpoint-url http://localhost:8000 --profile localddb create-table --attribute-definitions 'AttributeName=path,AttributeType=S' --table-name locks --key-schema 'AttributeName=path,KeyType=HASH' --billing-mode PAY_PER_REQUEST`
+4. Run commands using `AWS_PROFILE=localddb deploy-lock --storage dynamo --table locks --endpoint http://localhost:8000 ...`
