@@ -41,11 +41,10 @@ export interface ParsedArgs {
   'ci-job'?: string;
 
   storage: StorageType;
-  table?: string;
   region: string;
-
-  // TODO: should this stay?
-  assume: Array<string>;
+  table: string;
+  endpoint?: string;
+  fake: Array<string>; // TODO: keep this long-term?
 }
 
 export const APP_NAME = 'deploy-lock';
@@ -72,16 +71,19 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       command = 'prune';
     })
     .options({
-      'assume': {
-        default: [] as Array<string>,
-        string: true,
-        type: 'array',
-      },
       'author': {
         type: 'string',
       },
       'duration': {
         type: 'string',
+      },
+      'endpoint': {
+        type: 'string',
+      },
+      'fake': {
+        default: [] as Array<string>,
+        string: true,
+        type: 'array',
       },
       'links': {
         default: [] as Array<string>,
@@ -96,18 +98,19 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
         type: 'boolean',
         default: true,
       },
-      'storage': {
-        type: 'string',
-        choices: STORAGE_TYPES,
-        require: true,
-        // TODO: default, but TS gets mad
-      },
-      'table': {
-        type: 'string',
-      },
       'region': {
         type: 'string',
         default: 'us-east-1',
+      },
+      'storage': {
+        type: 'string',
+        choices: Object.keys(STORAGE_TYPES) as ReadonlyArray<StorageType>,
+        require: true,
+        default: 'memory' as StorageType,
+      },
+      'table': {
+        type: 'string',
+        default: 'locks',
       },
       'type': {
         type: 'string',

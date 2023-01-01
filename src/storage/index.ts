@@ -9,12 +9,17 @@ export interface StorageContext {
 }
 
 export interface Storage {
+  delete(path: string): Promise<LockData | undefined>;
   get(path: string): Promise<LockData | undefined>;
-  set(path: string, data: LockData): Promise<LockData>;
+  list(): Promise<Array<LockData>>;
+  set(data: LockData): Promise<LockData>;
 }
 
 export type StorageFactory = (context: StorageContext) => Promise<Storage>;
 
-export type StorageType = 'dynamo' | 'memory';
+export const STORAGE_TYPES = {
+  dynamo: 'DynamoDB',
+  memory: 'in-memory',
+} as const;
 
-export const STORAGE_TYPES: ReadonlyArray<StorageType> = ['dynamo', 'memory'] as const;
+export type StorageType = keyof typeof STORAGE_TYPES;

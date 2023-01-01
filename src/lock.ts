@@ -3,6 +3,7 @@ export const LOCK_TYPES = {
   deploy: 'a deploy',
   freeze: 'a change freeze',
   incident: 'an incident',
+  maintenance: 'a maintenance window',
 } as const;
 
 export type LockType = keyof typeof LOCK_TYPES;
@@ -23,6 +24,8 @@ export interface LockEnv {
 
 export interface LockData {
   type: LockType;
+
+  path: string;
 
   /**
    * Who created the lock.

@@ -56,7 +56,7 @@ export async function main(argv: Array<string>): Promise<ExitCode> {
   if (result) {
     return ExitCode.SUCCESS;
   } else {
-    logger.error('command failed');
+    logger.error({ command: commandFunction.name }, 'command failed');
     return ExitCode.ERROR;
   }
 }

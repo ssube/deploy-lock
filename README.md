@@ -16,10 +16,12 @@ an infrastructure incident.
       - [Prevent a deploy during a production incident](#prevent-a-deploy-during-a-production-incident)
       - [Prevent duplicate deploys of the same service from conflicting](#prevent-duplicate-deploys-of-the-same-service-from-conflicting)
     - [Command-line Interface](#command-line-interface)
-      - [User Options](#user-options)
-      - [Backend Options](#backend-options)
+      - [Basic Options](#basic-options)
+      - [Lock Data Options](#lock-data-options)
+      - [Storage Backend Options](#storage-backend-options)
     - [REST API](#rest-api)
       - [Endpoints](#endpoints)
+    - [Questions](#questions)
 
 ## Abstract
 
@@ -44,7 +46,16 @@ from being deployed into both the A and B clusters.
 - to lock multiple clusters in the same environment, run the command repeatedly with the same lock data
 - to lock a specific branch, put it in the path: `apps/staging/a/auth-app/main`
 
-TODO: should the service name (component 3) map to the kubernetes namespace rather than the service?
+Ultimately, the deploy path's layout should follow the hierarchy of resources that you may want to lock. One potential
+order is:
+
+- cloud
+- account
+- network
+- cluster
+- namespace
+
+Such as `aws/staging/apps/a/auth-app` or `gcp/production/build/gitlab/runner`.
 
 ### Lock Data
 
@@ -83,8 +94,6 @@ interface Lock {
 Friendly strings for `type`: `An automation run`, `A deploy`, `An incident`.
 
 If `$CI` is not set, the `ci` sub-struct will not be present.
-
-TODO: should there be a `type` for `A release freeze` (`freeze`)?
 
 ### Messaging
 
@@ -179,20 +188,13 @@ a service without ephemeral environments/branch switching.
 > deploy-lock check --path apps/staging --path apps/staging/a --path apps/staging/a/auth-app
 > deploy-lock check --path apps/staging/a/auth-app --recursive=false   # only checks the leaf node
 
+> deploy-lock list --path apps/staging    # list all locks within the apps/staging path
+
 > deploy-lock prune --path apps/staging   # prune expired locks within the path
 ```
 
-#### User Options
+#### Basic Options
 
-- `--type`
-  - string, enum
-  - type of lock
-  - one of `automation`, `deploy`, or `incident`
-- `--path`
-  - array, strings
-  - record paths
-  - always lowercase (force in code)
-  - `/^[-a-z\/]+$/`
 - `--author`
   - string
   - defaults to `$GITLAB_USER_EMAIL` if `$GITLAB_CI` is set
@@ -201,15 +203,29 @@ a service without ephemeral environments/branch switching.
   - number
   - duration of lock, relative to now
   - mutually exclusive with `--until`
-- `--until`
-  - string, timestamp
-  - duration of lock, absolute
-  - mutually exclusive with `--duration`
+- `--link`
+  - array, strings
+- `--path`
+  - array, strings
+  - record paths
+  - always lowercase (force in code)
+  - `/^[-a-z\/]+$/`
 - `--recursive`
   - boolean
   - recursively check locks
   - defaults to true for `check`
   - defaults to false for `lock`, `unlock`
+- `--type`
+  - string, enum
+  - type of lock
+  - one of `automation`, `deploy`, or `incident`
+- `--until`
+  - string, timestamp
+  - duration of lock, absolute
+  - mutually exclusive with `--duration`
+
+#### Lock Data Options
+
 - `--env-cluster`
   - string, enum
   - defaults to `$CLUSTER_NAME` if set
@@ -246,23 +262,51 @@ a service without ephemeral environments/branch switching.
   - job ID
   - defaults to `$CI_JOB_ID` if set
 
-TODO: should there be an `update` or `replace` command?
-
-TODO: should `--recursive` be available for `lock` or only `unlock`? A recursive lock would write multiple records
-
-#### Backend Options
+#### Storage Backend Options
 
 - `--storage`
   - string
   - one of `dynamodb`, `memory`
+- `--region`
+  - string, optional
+  - DynamoDB region name
 - `--table`
   - string
   - DynamoDB table name
+- `--endpoint`
+  - string, optional
+  - DynamoDB endpoint
+  - set to `http://localhost:8000` for testing with https://hub.docker.com/r/amazon/dynamodb-local
+- `--fake`
+  - string, optional
+  - a fake lock that should be added to the in-memory data store
+  - the in-memory data store always starts empty
 
 ### REST API
 
 #### Endpoints
 
 - `/locks GET`
-- `/locks POST`
-- `/locks/:path GET`?
+  - equivalent to `deploy-lock list`
+- `/locks?prune=true` POST
+  - equivalent to `deploy-lock prune`
+- `/locks/:path GET`
+  - equivalent to `deploy-lock check`
+- `/locks/:path POST`
+  - equivalent to `deploy-lock lock`
+- `/locks/:path DELETE`
+  - equivalent to `deploy-lock unlock`
+
+### Questions
+
+1. In the [deploy path](#deploy-path), should account come before network or network before account?
+   1. `aws/apps/staging` vs `aws/staging/apps`
+2. Should there be an `update` or `replace` command?
+3. Should `--recursive` be available for `lock` or only `unlock`?
+   1. a recursive lock would write multiple records
+4. Should locks have multiple authors?
+   1. It doesn't make sense to have more than one lock for the same path
+   2. But having multiple authors would allow for multi-party locks
+      1. for CI: `[gitlab, $GITLAB_USER_NAME]`
+      2. for incident: `[first-responder, incident-commander]`
+   3. Each author has to `unlock` before the lock is removed/released

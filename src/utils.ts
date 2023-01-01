@@ -2,7 +2,7 @@
 import { doesExist, mustDefault } from '@apextoaster/js-utils';
 
 import { ParsedArgs } from './args.js';
-import { LockCI, LockData, LockEnv } from './lock.js';
+import { LOCK_TYPES, LockCI, LockData, LockEnv } from './lock.js';
 
 export function splitPath(path: string): Array<string> {
   const segments = path.split('/');
@@ -65,6 +65,7 @@ export function buildLinks(args: ParsedArgs): Record<string, string> {
 export function buildLock(args: ParsedArgs, env = process.env): LockData {
   return {
     type: mustDefault(args.type, 'deploy'),
+    path: args.path,
     author: buildAuthor(args, env),
     links: buildLinks(args),
     created_at: 0,
@@ -73,4 +74,9 @@ export function buildLock(args: ParsedArgs, env = process.env): LockData {
     env: buildEnv(args, env),
     ci: buildCI(args, env),
   };
+}
+
+export function printLock(path: string, data: LockData): string {
+  const friendlyType = LOCK_TYPES[data.type];
+  return `${path} is locked until ${data.expires_at} by ${friendlyType} in ${data.env.cluster}`;
 }
