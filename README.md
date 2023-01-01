@@ -143,6 +143,7 @@ Each lock must contain the following fields:
 ```typescript
 interface Lock {
   type: 'automation' | 'deploy' | 'freeze' | 'incident' | 'maintenance';
+  path: string;
   author: string;
   links: Map<string, string>;
 
@@ -194,7 +195,7 @@ Friendly strings for `type`:
 
 ```shell
 > deploy-lock check --path apps/staging/a/auth-app   # is equivalent to
-> deploy-lock check --path apps/staging --path apps/staging/a --path apps/staging/a/auth-app
+> deploy-lock check --path apps --path apps/staging --path apps/staging/a --path apps/staging/a/auth-app
 > deploy-lock check --path apps/staging/a/auth-app --recursive=false   # only checks the leaf node
 
 > deploy-lock list --path apps/staging    # list all locks within the apps/staging path
@@ -332,6 +333,7 @@ Friendly strings for `type`:
       1. for CI: `[gitlab, $GITLAB_USER_NAME]`
       2. for an incident: `[first-responder, incident-commander]`
    3. Each author has to `unlock` before the lock is removed/released
+5. Should `LockData.env` be a string/array, like `.path`?
 
 ### Testing
 
