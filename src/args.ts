@@ -42,6 +42,7 @@ export interface ParsedArgs {
 
   storage: StorageType;
   table?: string;
+  region: string;
 
   // TODO: should this stay?
   assume: Array<string>;
@@ -103,6 +104,10 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       },
       'table': {
         type: 'string',
+      },
+      'region': {
+        type: 'string',
+        default: 'us-east-1',
       },
       'type': {
         type: 'string',

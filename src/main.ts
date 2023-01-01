@@ -6,8 +6,9 @@ import { CommandFunction, CommandName } from './command/index.js';
 import { lockCommand } from './command/lock.js';
 import { pruneCommand } from './command/prune.js';
 import { unlockCommand } from './command/unlock.js';
+import { dynamoConnect } from './storage/dynamo.js';
 import { StorageFactory, StorageType } from './storage/index.js';
-import { connectMemory } from './storage/memory.js';
+import { memoryConnect } from './storage/memory.js';
 
 /**
  * Process exit codes.
@@ -25,8 +26,8 @@ export const Commands: Record<CommandName, CommandFunction> = {
 };
 
 export const Storages: Record<StorageType, StorageFactory> = {
-  dynamo: connectMemory,
-  memory: connectMemory,
+  dynamo: dynamoConnect,
+  memory: memoryConnect,
 };
 
 /**
