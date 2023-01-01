@@ -193,20 +193,20 @@ Friendly strings for `type`:
 ### Command-line Interface
 
 ```shell
-> deploy-lock lock --path apps/staging --type automation --duration 60m
-> deploy-lock lock --path apps/staging/a/auth-app --type deploy --duration 5m
-> deploy-lock lock --path apps/staging --until 2022-12-31T12:00   # local TZ, unless Z specified
-
-> deploy-lock unlock --path apps/staging --type automation    # unlock type must match lock type
-
 > deploy-lock check --path apps/staging/a/auth-app   # is equivalent to
 > deploy-lock check --path apps/staging --path apps/staging/a --path apps/staging/a/auth-app
 > deploy-lock check --path apps/staging/a/auth-app --recursive=false   # only checks the leaf node
 
 > deploy-lock list --path apps/staging    # list all locks within the apps/staging path
 
+> deploy-lock lock --path apps/staging --type automation --duration 60m
+> deploy-lock lock --path apps/staging/a/auth-app --type deploy --duration 5m
+> deploy-lock lock --path apps/staging --until 2022-12-31T12:00   # local TZ, unless Z specified
+
 > deploy-lock prune --path apps/staging   # prune expired locks within the path
 > deploy-lock prune --path apps/staging --now future-date   # prune locks that will expire by --now
+
+> deploy-lock unlock --path apps/staging --type automation    # unlock type must match lock type
 ```
 
 #### Basic Options
@@ -309,27 +309,28 @@ Friendly strings for `type`:
 
 - `/locks GET`
   - equivalent to `deploy-lock list`
-- `/locks?prune=true` POST
+- `/locks DELETE`
   - equivalent to `deploy-lock prune`
-- `/locks/:path GET`
-  - equivalent to `deploy-lock check`
-- `/locks/:path POST`
-  - equivalent to `deploy-lock lock`
 - `/locks/:path DELETE`
   - equivalent to `deploy-lock unlock`
+- `/locks/:path GET`
+  - equivalent to `deploy-lock check`
+- `/locks/:path PUT`
+  - equivalent to `deploy-lock lock`
 
 ### Questions
 
 1. In the [deploy path](#deploy-path), should account come before network or network before account?
    1. `aws/apps/staging` vs `aws/staging/apps`
 2. Should there be an `update` or `replace` command?
-3. Should `--recursive` be available for `lock` or only `unlock`?
+3. Should `--recursive` be available for `lock` and `unlock`, or only `check`?
    1. a recursive lock would write multiple records
+   2. a recursive unlock could delete multiple records
 4. Should locks have multiple authors?
    1. It doesn't make sense to have more than one lock for the same path
    2. But having multiple authors would allow for multi-party locks
       1. for CI: `[gitlab, $GITLAB_USER_NAME]`
-      2. for incident: `[first-responder, incident-commander]`
+      2. for an incident: `[first-responder, incident-commander]`
    3. Each author has to `unlock` before the lock is removed/released
 
 ### Testing
