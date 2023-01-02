@@ -325,25 +325,37 @@ Friendly strings for `type`:
 
 ### Questions
 
-1. In the [deploy path](#deploy-path), should account come before network or network before account?
-   1. `aws/apps/staging` vs `aws/staging/apps`
+1. In the [deploy path](#deploy-path), should account come before region or region before account?
+   1. `aws/us-east-1/staging` vs `aws/staging/us-east-1`
+   2. This is purely a recommendation in the docs, `lock.path` and `lock.source` (replacing `lock.env`) will both be
+      slash-delimited or array paths.
 2. Should there be an `update` or `replace` command?
+   1. Probably not, at least not without lock history or multi-party locks.
+   2. When the data store can keep old locks, `replace` could expire an existing lock and create a new one
+   3. With multi-party locks, `update` could update the `expires_at` and add a new author
 3. Should `--recursive` be available for `lock` and `unlock`, or only `check`?
-   1. a recursive lock would write multiple records
-   2. a recursive unlock could delete multiple records
+   1. TBD
+   2. A recursive `lock` would write multiple records
+   3. A recursive `unlock` could delete multiple records
 4. Should locks have multiple authors?
-   1. It doesn't make sense to have more than one lock for the same path
-   2. But having multiple authors would allow for multi-party locks
+   1. TBD
+   2. It doesn't make sense to have more than one active lock for the same path
+      1. Or does it?
+      2. Different levels can use `--allow` without creating multiple locks
+   3. But having multiple authors would allow for multi-party locks
       1. for CI: `[gitlab, $GITLAB_USER_NAME]`
       2. for an incident: `[first-responder, incident-commander]`
-   3. Each author has to `unlock` before the lock is removed/released
+   4. Each author has to `unlock` before the lock is removed/released
 5. Should `LockData.env` be a string/array, like `LockData.path`?
    1. Very probably yes, because otherwise it will need `env.cloud`, `env.network`, etc, and those
       are not always predictable/present.
 6. Should there be an `--allow`/`LockData.allow` field?
-   1. When running `check --type`, if `LockData.allow` includes `--type`, it will be allowed
+   1. Probably yes
+   2. When running `check --type`, if `LockData.allow` includes `--type`, it will be allowed
       1. `freeze` should allow `automation`, but not `deploy`
       2. `incident` could allow `deploy`, but not `automation`
+7. Wildcards in paths?
+   1. Probably no, it will become confusing pretty quickly, and KV stores do not support them consistently (or at all).
 
 ### Testing
 
