@@ -151,19 +151,13 @@ interface Lock {
   path: string;
   author: string;
   links: Map<string, string>;
+  // often duplicates of path, but useful for cross-project locks
+  source: string;
 
   // Timestamps, calculated from --duration and --until
   created_at: number;
   updated_at: number;
   expires_at: number;
-
-  // Env fields
-  // often duplicates of path, but useful for cross-project locks
-  env: {
-    cluster: string;
-    account: string;
-    target?: string; // optional
-  }
 
   // CI fields, optional
   ci?: {
@@ -183,7 +177,7 @@ If `$CI` is not set, the `ci` sub-struct will not be present.
 - create a new lock: `locked ${path} for ${type:friendly} until ${expires_at:datetime}`
   - > Locked `apps/acceptance/a` for a deploy until Sat 31 Dec, 12:00
   - > Locked `gitlab/production` for an incident until Sat 31 Dec, 12:00
-- error, existing lock: `error: ${path} is locked until ${expires_at:datetime} by ${type:friendly} in ${cluster}/${env}`
+- error, existing lock: `error: ${path} is locked until ${expires_at:datetime} by ${type:friendly} in ${source}`
   - > Error: `apps/acceptance` is locked until Sat 31 Dec, 12:00 by an automation run in `testing/staging`.
 
 #### Friendly Types
@@ -254,24 +248,31 @@ Friendly strings for `type`:
   - mutually exclusive with `--until`
 - `--link`
   - array, strings
+- `--source`
+  - string
+  - each component:
+    - first
+      - defaults to `$CLUSTER_NAME` if set
+      - defaults to `path.split.0` otherwise
+    - second
+      - defaults to `$DEPLOY_ENV` if set
+      - defaults to `path.split.1` otherwise
+    - third
+      - defaults to `$DEPLOY_TARGET` if set
+      - defaults to `path.split.2` otherwise
+    - fourth
+      - defaults to `--ci-project` if set
+      - defaults to `$CI_PROJECT_PATH` if set
+      - defaults to `path.split.3` otherwise
+    - fifth
+      - defaults to `--ci-ref` if set
+      - defaults to `$CI_COMMIT_REF_SLUG` if set
+      - defaults to `path.split.4` otherwise
 - `--until`
   - string, timestamp
   - duration of lock, absolute
   - may be given in epoch seconds (`\d+`) or as an ISO-8601 date (intervals are not allowed)
   - mutually exclusive with `--duration`
-- `--env-cluster`
-  - string, enum
-  - defaults to `$CLUSTER_NAME` if set
-  - defaults to `path.split.0` otherwise
-- `--env-account`
-  - string, enum
-  - defaults to `$DEPLOY_ENV` if set
-  - defaults to `path.split.1` otherwise
-- `--env-target`
-  - optional string
-  - `/^[a-z]$/`
-  - defaults to `$DEPLOY_TARGET` if set
-  - defaults to `path.split.2` otherwise
 - `--ci-project`
   - optional string
   - project path
@@ -334,6 +335,11 @@ Friendly strings for `type`:
 
 ### Features
 
+- in-memory data store, mostly for testing
+- DynamoDB data store
+- lock paths and recursive checking
+- infer lock data from CI variables
+
 ### Building
 
 1. Clone with `git clone git@github.com:ssube/deploy-lock.git`
@@ -353,17 +359,18 @@ Friendly strings for `type`:
 
 ### TODOs
 
-1. SQL data store, with history (don't need to remove old records)
-2. S3 data store
-3. REST API with lock endpoints
-4. Kubernetes admission controller with webhook endpoint
+1. Infer lock source from other arguments/CI variables
+2. SQL data store, with history (don't need to remove old records)
+3. S3 data store
+4. REST API with lock endpoints
+5. Kubernetes admission controller with webhook endpoint
 
 ### Questions
 
 1. In the [deploy path](#deploy-path), should account come before region or region before account?
    1. `aws/us-east-1/staging` vs `aws/staging/us-east-1`
-   2. This is purely a recommendation in the docs, `lock.path` and `lock.source` (replacing `lock.env`) will both be
-      slash-delimited or array paths.
+   2. This is purely a recommendation in the docs, `lock.path` and `lock.source` will both be slash-delimited or array
+      paths.
 2. Should there be an `update` or `replace` command?
    1. Probably not, at least not without lock history or multi-party locks.
    2. When the data store can keep old locks, `replace` could expire an existing lock and create a new one
@@ -382,7 +389,8 @@ Friendly strings for `type`:
       2. for an incident: `[first-responder, incident-commander]`
    4. Each author has to `unlock` before the lock is removed/released
 5. Should `LockData.env` be a string/array, like `LockData.path`?
-   1. Very probably yes, because otherwise it will need `env.cloud`, `env.network`, etc, and those
+   1. Done
+   2. Very probably yes, because otherwise it will need `env.cloud`, `env.network`, etc, and those
       are not always predictable/present.
 6. Should there be an `--allow`/`LockData.allow` field?
    1. Probably yes

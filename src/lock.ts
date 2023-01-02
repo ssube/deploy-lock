@@ -16,12 +16,6 @@ export interface LockCI {
   job: string;
 }
 
-export interface LockEnv {
-  cluster: string;
-  account: string;
-  target?: string; // optional
-}
-
 export interface LockData {
   type: LockType;
 
@@ -44,7 +38,7 @@ export interface LockData {
   /**
    * Environment where the lock was created. Often duplicates the path, but useful for cross-project locks.
    */
-  env: LockEnv;
+  source: string;
 
   /**
    * Attribution info when CI was the source of the lock.

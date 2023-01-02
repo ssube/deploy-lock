@@ -2,7 +2,7 @@
 import { doesExist, InvalidArgumentError, mustDefault } from '@apextoaster/js-utils';
 
 import { ParsedArgs } from './args.js';
-import { LOCK_TYPES, LockCI, LockData, LockEnv } from './lock.js';
+import { LOCK_TYPES, LockCI, LockData } from './lock.js';
 
 export function matchPath(baseStr: string, otherStr: string): boolean {
   const base = splitPath(baseStr);
@@ -53,14 +53,6 @@ export function buildCI(args: ParsedArgs, env: typeof process.env): LockCI | und
   return undefined;
 }
 
-export function buildEnv(args: ParsedArgs, env: typeof process.env): LockEnv {
-  return {
-    cluster: mustDefault(args['env-cluster'], env.CLUSTER_NAME, ENV_UNSET),
-    account: mustDefault(args['env-account'], env.DEPLOY_ENV, ENV_UNSET),
-    target: mustDefault(args['env-target'], env.DEPLOY_TARGET, ENV_UNSET),
-  };
-}
-
 export function buildAuthor(args: ParsedArgs, env: typeof process.env): string {
   if (doesExist(env.GITLAB_CI)) {
     return mustDefault(args.author, env.GITLAB_USER_EMAIL, env.USER);
@@ -92,14 +84,14 @@ export function buildLock(args: ParsedArgs, env = process.env): LockData {
     created_at: args.now,
     updated_at: args.now,
     expires_at: calculateExpires(args),
-    env: buildEnv(args, env),
+    source: args.source,
     ci: buildCI(args, env),
   };
 }
 
 export function printLock(path: string, data: LockData): string {
   const friendlyType = LOCK_TYPES[data.type];
-  return `${path} is locked until ${data.expires_at} by ${friendlyType} in ${data.env.cluster}`;
+  return `${path} is locked until ${data.expires_at} by ${friendlyType} in ${data.source}`;
 }
 
 export function calculateExpires(args: ParsedArgs): number {

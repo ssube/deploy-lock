@@ -31,10 +31,7 @@ export interface ParsedArgs {
   recursive: boolean;
   links: Array<string>;
   now: number;
-
-  'env-cluster'?: string;
-  'env-account'?: string;
-  'env-target'?: string;
+  source: string;
 
   'ci-project'?: string;
   'ci-ref'?: string;
@@ -116,6 +113,10 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
         type: 'string',
         default: 'us-east-1',
       },
+      'source': {
+        type: 'string',
+        require: true,
+      },
       'storage': {
         type: 'string',
         choices: Object.keys(STORAGE_TYPES) as ReadonlyArray<StorageType>,
@@ -132,15 +133,6 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
         choices: Object.keys(LOCK_TYPES) as ReadonlyArray<LockType>,
       },
       'until': {
-        type: 'string',
-      },
-      'env-cluster': {
-        type: 'string',
-      },
-      'env-account': {
-        type: 'string',
-      },
-      'env-target': {
         type: 'string',
       },
       'ci-project': {
