@@ -39,6 +39,7 @@ export interface ParsedArgs {
   'ci-pipeline'?: string;
   'ci-job'?: string;
 
+  listen?: number;
   storage: StorageType;
   region: string;
   table: string;
@@ -100,6 +101,9 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
         default: [] as Array<string>,
         string: true,
         type: 'array',
+      },
+      'listen': {
+        type: 'number',
       },
       'now': {
         type: 'number',
