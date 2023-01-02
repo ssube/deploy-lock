@@ -16,14 +16,19 @@ restarting pods during an infrastructure incident.
     - [Lock Data](#lock-data)
     - [Messaging](#messaging)
       - [Friendly Types](#friendly-types)
+  - [Usage](#usage)
     - [Command-line Interface](#command-line-interface)
       - [Basic Options](#basic-options)
       - [Lock Data Options](#lock-data-options)
       - [Storage Backend Options](#storage-backend-options)
     - [REST API](#rest-api)
       - [Endpoints](#endpoints)
-    - [Questions](#questions)
+  - [Development](#development)
+    - [Features](#features)
+    - [Building](#building)
     - [Testing](#testing)
+    - [TODOs](#todos)
+    - [Questions](#questions)
 
 ## Abstract
 
@@ -191,6 +196,8 @@ Friendly strings for `type`:
 - `incident`: `An incident`
 - `maintenance`: `A maintenance window`
 
+## Usage
+
 ### Command-line Interface
 
 ```shell
@@ -323,6 +330,34 @@ Friendly strings for `type`:
 - `/locks/:path DELETE`
   - equivalent to `deploy-lock unlock`
 
+## Development
+
+### Features
+
+### Building
+
+1. Clone with `git clone git@github.com:ssube/deploy-lock.git`
+2. Switch into the project directory with `cd deploy-lock`
+3. Run a full lint, build, and test with `make ci`
+4. Run the program's help with `make run-help` or `node out/src/index.js --help`
+
+### Testing
+
+1. Launch DynamoDB Local with `podman run --rm -p 8000:8000 docker.io/amazon/dynamodb-local`
+2. Create a profile with `aws configure --profile localddb`
+   1. placeholder tokens (`foo` and `bar` is fine)
+   2. us-east-1 region
+   3. json output
+3. Create a `locks` table with `aws dynamodb --endpoint-url http://localhost:8000 --profile localddb create-table --attribute-definitions 'AttributeName=path,AttributeType=S' --table-name locks --key-schema 'AttributeName=path,KeyType=HASH' --billing-mode PAY_PER_REQUEST`
+4. Run commands using `AWS_PROFILE=localddb deploy-lock --storage dynamo --table locks --endpoint http://localhost:8000 ...`
+
+### TODOs
+
+1. SQL data store, with history (don't need to remove old records)
+2. S3 data store
+3. REST API with lock endpoints
+4. Kubernetes admission controller with webhook endpoint
+
 ### Questions
 
 1. In the [deploy path](#deploy-path), should account come before region or region before account?
@@ -356,13 +391,3 @@ Friendly strings for `type`:
       2. `incident` could allow `deploy`, but not `automation`
 7. Wildcards in paths?
    1. Probably no, it will become confusing pretty quickly, and KV stores do not support them consistently (or at all).
-
-### Testing
-
-1. Launch DynamoDB Local with `podman run --rm -p 8000:8000 docker.io/amazon/dynamodb-local`
-2. Create a profile with `aws configure --profile localddb`
-   1. placeholder tokens (`foo` and `bar` is fine)
-   2. us-east-1 region
-   3. json output
-3. Create a `locks` table with `aws dynamodb --endpoint-url http://localhost:8000 --profile localddb create-table --attribute-definitions 'AttributeName=path,AttributeType=S' --table-name locks --key-schema 'AttributeName=path,KeyType=HASH' --billing-mode PAY_PER_REQUEST`
-4. Run commands using `AWS_PROFILE=localddb deploy-lock --storage dynamo --table locks --endpoint http://localhost:8000 ...`
