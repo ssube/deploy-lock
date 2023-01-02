@@ -103,7 +103,8 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       },
       'now': {
         type: 'number',
-        default: Date.now(),
+        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+        default: Math.round(Date.now() / 1000),
       },
       'recursive': {
         type: 'boolean',
