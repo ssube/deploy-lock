@@ -111,7 +111,7 @@ export const TIME_MULTIPLIERS: Array<[RegExp, number]> = [
   [/^(\d+)$/, 1], // integer seconds
   [/^(\d+)s$/, 1], // human seconds
   [/^(\d+)m$/, 60], // human minutes
-  [/^(\d+)h$/, 60 * 60], // human minutes
+  [/^(\d+)h$/, 60 * 60], // human hours
   [/^(\d+)d$/, 60 * 60 * 24], // human days
 ];
 
@@ -123,8 +123,6 @@ export function parseTime(time: string): number {
 
   for (const [regex, mult] of TIME_MULTIPLIERS) {
     const match = time.match(regex);
-    // eslint-disable-next-line no-console
-    console.log('regex test', regex, mult, match);
     if (doesExist(match)) {
       const [_full, digits] = Array.from(match);
       return parseInt(digits, 10) * mult;
