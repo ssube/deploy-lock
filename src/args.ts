@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/indent */
 import yargs from 'yargs';
 
 import { CommandName } from './command/index.js';
@@ -51,6 +52,15 @@ export interface ParsedArgs {
 export const APP_NAME = 'deploy-lock';
 export const ENV_NAME = 'DEPLOY_LOCK';
 
+// Necessary hint for yargs .command()
+export interface CommandPath { path: string }
+
+export function pathBuilder(builder: yargs.Argv) {
+  builder.positional('path', {
+    type: 'string',
+  });
+}
+
 /**
  * Parse CLI options and environment variables.
  *
@@ -61,17 +71,17 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
 
   const parser = yargs(argv)
     .usage(`Usage: ${APP_NAME} <command> [options]`)
-    .command('check', 'check if a lock exists')
-    .command('list', 'list all locks', () => { /* noop */}, () => {
+    .command('check <path>', 'check if a lock exists')
+    .command<CommandPath>('list <path>', 'list all locks', pathBuilder, () => {
       command = 'list';
     })
-    .command('lock', 'lock a path', () => { /* noop */}, () => {
+    .command<CommandPath>('lock <path>', 'lock a path', pathBuilder, () => {
       command = 'lock';
     })
-    .command('unlock', 'unlock a path', () => { /* noop */}, () => {
+    .command<CommandPath>('unlock <path>', 'unlock a path', pathBuilder, () => {
       command = 'unlock';
     })
-    .command('prune', 'remove expired locks', () => { /* noop */}, () => {
+    .command<CommandPath>('prune [path]', 'remove expired locks', pathBuilder, () => {
       command = 'prune';
     })
     .options({
@@ -97,10 +107,6 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       'now': {
         type: 'number',
         default: Date.now(),
-      },
-      'path': {
-        type: 'string',
-        require: true,
       },
       'recursive': {
         type: 'boolean',

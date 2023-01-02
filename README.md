@@ -194,34 +194,36 @@ Friendly strings for `type`:
 ### Command-line Interface
 
 ```shell
-> deploy-lock check --path apps/staging/a/auth-app   # is equivalent to
-> deploy-lock check --path apps --path apps/staging --path apps/staging/a --path apps/staging/a/auth-app
-> deploy-lock check --path apps/staging/a/auth-app --recursive=false   # only checks the leaf node
+> deploy-lock check apps/staging/a/auth-app   # is equivalent to
+> deploy-lock check apps && deploy-lock check apps/staging && deploy-lock check apps/staging/a && deploy-lock check apps/staging/a/auth-app
+> deploy-lock check apps/staging/a/auth-app --recursive=false   # only checks the leaf node
 
-> deploy-lock list --path apps/staging    # list all locks within the apps/staging path
+> deploy-lock list apps/staging    # list all locks within the apps/staging path
 
-> deploy-lock lock --path apps/staging --type automation --duration 60m
-> deploy-lock lock --path apps/staging/a/auth-app --type deploy --duration 5m
-> deploy-lock lock --path apps/staging --until 2022-12-31T12:00   # local TZ, unless Z specified
+> deploy-lock lock apps/staging --type automation --duration 60m
+> deploy-lock lock apps/staging/a/auth-app --type deploy --duration 5m
+> deploy-lock lock apps/staging --until 2022-12-31T12:00   # local TZ, unless Z specified
 
-> deploy-lock prune --path apps/staging   # prune expired locks within the path
-> deploy-lock prune --path apps/staging --now future-date   # prune locks that will expire by --now
+> deploy-lock prune   # prune all expired locks
+> deploy-lock prune apps/staging   # prune expired locks within the path
+> deploy-lock prune apps/staging --now future-date   # prune locks that will expire by --now
 
-> deploy-lock unlock --path apps/staging --type automation    # unlock type must match lock type
+> deploy-lock unlock apps/staging --type automation    # unlock type must match lock type
 ```
 
 #### Basic Options
 
 - command
   - one of `check`, `list`, `lock`, `prune`, `unlock`
+- `<path>`
+  - positional, required
+  - string
+  - lock path
+  - always lowercase (forced in code)
+  - `/^[-a-z\/]+$/`
 - `--now`
   - number, optional
   - defaults to current epoch time
-- `--path`
-  - array, strings
-  - record paths
-  - always lowercase (force in code)
-  - `/^[-a-z\/]+$/`
 - `--recursive`
   - boolean
   - recursively check locks
@@ -253,26 +255,26 @@ Friendly strings for `type`:
 - `--env-cluster`
   - string, enum
   - defaults to `$CLUSTER_NAME` if set
-  - defaults to `--path.split.0` otherwise
+  - defaults to `path.split.0` otherwise
 - `--env-account`
   - string, enum
   - defaults to `$DEPLOY_ENV` if set
-  - defaults to `--path.split.1` otherwise
+  - defaults to `path.split.1` otherwise
 - `--env-target`
   - optional string
   - `/^[a-z]$/`
   - defaults to `$DEPLOY_TARGET` if set
-  - defaults to `--path.split.2` otherwise
+  - defaults to `path.split.2` otherwise
 - `--ci-project`
   - optional string
   - project path
   - defaults to `$CI_PROJECT_PATH` if set
-  - defaults to `--path.split.3` otherwise
+  - defaults to `path.split.3` otherwise
 - `--ci-ref`
   - optional string
   - branch or tag
   - defaults to `$CI_COMMIT_REF_SLUG` if set
-  - defaults to `--path.split.4` otherwise
+  - defaults to `path.split.4` otherwise
 - `--ci-commit`
   - optional string
   - SHA of ref
