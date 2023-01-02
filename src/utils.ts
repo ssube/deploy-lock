@@ -91,8 +91,14 @@ export function buildLock(args: ParsedArgs, env = process.env): LockData {
 }
 
 export function printLock(path: string, data: LockData): string {
+  const friendlyExpires = printTime(data.expires_at);
   const friendlyType = LOCK_TYPES[data.type];
-  return `${path} is locked until ${data.expires_at} by ${friendlyType} in ${data.source}`;
+
+  return `${path} is locked until ${friendlyExpires} by ${friendlyType} in ${data.source}`;
+}
+
+export function printTime(time: number): string {
+  return new Date(time * 1000).toLocaleString();
 }
 
 export function calculateExpires(args: ParsedArgs): number {

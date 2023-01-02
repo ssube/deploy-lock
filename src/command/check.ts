@@ -1,12 +1,12 @@
 import { doesExist } from '@apextoaster/js-utils';
-import { ParsedArgs } from '../args.js';
 
+import { ParsedArgs } from '../args.js';
 import { printLock, walkPath } from '../utils.js';
 import { CommandContext } from './index.js';
 
 export async function checkCommand(context: CommandContext) {
   const { args, logger, storage } = context;
-  const now = Date.now();
+  const { now } = args;
 
   logger.info({ now }, 'running check command');
 
