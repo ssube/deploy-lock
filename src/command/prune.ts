@@ -1,8 +1,8 @@
 import { CommandContext } from './index.js';
 
 export async function pruneCommand(context: CommandContext) {
-  const { logger, storage } = context;
-  const now = Date.now();
+  const { args, logger, storage } = context;
+  const { now } = args;
 
   logger.info({ now }, 'running prune command');
 

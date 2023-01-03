@@ -4,6 +4,7 @@ import yargs from 'yargs';
 import { CommandName } from './command/index.js';
 import { LOCK_TYPES, LockType } from './lock.js';
 import { STORAGE_TYPES, StorageType } from './storage/index.js';
+import { parseTime } from './utils.js';
 
 /**
  * CLI options.
@@ -98,6 +99,7 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       },
       'duration': {
         type: 'string',
+        conflicts: ['until'],
       },
       'endpoint': {
         type: 'string',
@@ -117,9 +119,10 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
         default: 8000,
       },
       'now': {
-        type: 'number',
+        type: 'string', // because of coerce, ends up as a number
         // eslint-disable-next-line @typescript-eslint/no-magic-numbers
         default: Math.round(Date.now() / 1000),
+        coerce: parseTime,
       },
       'recursive': {
         type: 'boolean',
@@ -150,6 +153,7 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       },
       'until': {
         type: 'string',
+        conflicts: ['duration'],
       },
       'ci-project': {
         type: 'string',

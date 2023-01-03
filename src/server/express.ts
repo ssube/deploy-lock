@@ -1,7 +1,8 @@
-import { doesExist } from '@apextoaster/js-utils';
+import { doesExist, mustDefault } from '@apextoaster/js-utils';
 import express, { Express, Request, Response } from 'express';
 
 import { APP_NAME } from '../args.js';
+import { checkArgsPath } from '../command/check.js';
 import { LockData, LockType } from '../lock.js';
 import { AdmissionRequest, buildAdmissionResponse, getAdmissionPath } from './admission.js';
 import { ServerContext } from './index.js';
@@ -40,28 +41,36 @@ export async function expressAdmission(context: ServerContext, req: Request, res
   const path = getAdmissionPath('kube', admissionRequest); // TODO: take admission base from context args
   context.logger.info({ path }, 'express admission request');
 
-  const lock = await context.storage.get(path);
-  const available = doesExist(lock) === false;
-  const admission = buildAdmissionResponse(available, admissionRequest.request.uid);
-  context.logger.debug({ available, admission }, 'responding to admission request');
+  const [allowed] = await checkArgsPath({
+    ...context,
+    args: {
+      ...context.args,
+      path,
+      type: 'deploy', // TODO: add a way to define this?
+    }
+  });
+
+  const admission = buildAdmissionResponse(allowed, admissionRequest.request.uid);
+  context.logger.debug({ allowed, admission }, 'responding to admission request');
   res.status(STATUS_ALLOWED).json(admission);
 }
 
 export async function expressCheck(context: ServerContext, req: Request, res: Response): Promise<void> {
   const path = req.params[0];
+  const type = mustDefault(req.query.type as LockType, 'deploy');
+
   context.logger.info({ path }, 'express check request');
 
-  const lock = await context.storage.get(path);
-  if (doesExist(lock)) {
-    if (doesExist(req.query.type)) {
-      const allowed = lock.allow.includes(req.query.type as LockType);
-      sendLocks(res, [ lock ], allowed);
-    } else {
-      sendLocks(res, [ lock ], false);
+  const [allowed, locks] = await checkArgsPath({
+    ...context,
+    args: {
+      ...context.args,
+      // TODO: is this a hack?
+      path,
+      type,
     }
-  } else {
-    sendLocks(res, [], true);
-  }
+  });
+  sendLocks(res, locks, allowed);
 }
 
 export async function expressList(context: ServerContext, req: Request, res: Response): Promise<void> {

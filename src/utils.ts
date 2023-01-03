@@ -111,11 +111,19 @@ export const TIME_MULTIPLIERS: Array<[RegExp, number]> = [
   [/^(\d+)d$/, 60 * 60 * 24], // human days
 ];
 
+export const TIME_ISO_MATCH = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?$/;
+
 /**
  * Convert a string of the form `12345` or `15m` into seconds.
  */
-export function parseTime(time: string): number {
-  // TODO: handling for ISO timestamps
+export function parseTime(time: number | string): number {
+  if (typeof time === 'number') {
+    return time;
+  }
+
+  if (TIME_ISO_MATCH.test(time)) {
+    return new Date(time).getTime() / 1000;
+  }
 
   for (const [regex, mult] of TIME_MULTIPLIERS) {
     const match = time.match(regex);
