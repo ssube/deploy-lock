@@ -26,6 +26,7 @@ export interface ParsedArgs {
   type: LockType;
   path: string;
   author?: string;
+  allow: Array<LockType>;
   duration?: string;
   until?: string;
   recursive: boolean;
@@ -86,6 +87,12 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       command = 'prune';
     })
     .options({
+      'allow': {
+        choices: Object.keys(LOCK_TYPES) as ReadonlyArray<LockType>,
+        default: [] as Array<LockType>,
+        type: 'array',
+        string: true,
+      },
       'author': {
         type: 'string',
       },

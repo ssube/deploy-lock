@@ -20,7 +20,7 @@ export async function checkCommand(context: CommandContext) {
       } else {
         const friendly = printLock(path, lock);
         logger.info({ lock, friendly, path }, 'found active lock');
-        return false;
+        return lock.allow.includes(args.type);
       }
     }
   }

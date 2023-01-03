@@ -27,6 +27,11 @@ export interface LockData {
   author: string;
 
   /**
+   * Check types that should be allowed during this lock.
+   */
+  allow: Array<LockType>;
+
+  /**
    * Links with more information about the lock.
    */
   links: Record<string, string>;

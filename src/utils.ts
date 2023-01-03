@@ -82,6 +82,7 @@ export function buildLock(args: ParsedArgs, env = process.env): LockData {
     path: args.path,
     author: buildAuthor(args, env),
     links: buildLinks(args),
+    allow: args.allow,
     created_at: args.now,
     updated_at: args.now,
     expires_at: calculateExpires(args),

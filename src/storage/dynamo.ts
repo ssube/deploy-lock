@@ -187,6 +187,9 @@ export function attributesFromLock(lock: LockData): Record<string, AttributeValu
     source: {
       S: lock.source,
     },
+    allow: {
+      S: lock.allow.join(','),
+    },
     links: attributesFromLinks(lock.links),
   };
 
@@ -223,6 +226,7 @@ export function lockFromAttributes(attributes: Record<string, AttributeValue>): 
     path: mustExist(attributes.path.S),
     author: mustExist(attributes.author.S),
     source: mustExist(attributes.source.S),
+    allow: mustExist(attributes.allow.S).split(',') as Array<LockType>,
     created_at: parseInt(mustExist(attributes.created_at.N), 10),
     expires_at: parseInt(mustExist(attributes.expires_at.N), 10),
     updated_at: parseInt(mustExist(attributes.updated_at.N), 10),

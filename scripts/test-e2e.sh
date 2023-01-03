@@ -55,21 +55,26 @@ function run_app() {
 }
 
 # scenarios:
-echo "1. automation lock before deploy"
+echo "1. automation lock before deploy, should prevent the deploy"
 start_ddb
 run_app lock apps --type automation --duration 5m
 run_app check apps/foo --type deploy && exit 1
 
-echo "2. incident lock before deploy"
+echo "2. incident lock before deploy, should allow the deploy"
 start_ddb
-run_app lock apps --type incident --duration 5m
-run_app check apps/foo --type deploy && exit 1
+run_app lock apps --type incident --duration 5m --allow deploy
+run_app check apps/foo --type deploy || exit 1
 
-echo "3. duplicate deploys"
+echo "3. duplicate deploys, should prevent the deploy"
 start_ddb
 run_app lock apps --type deploy --duration 5m
 run_app check apps/bar --type deploy && exit 1
 
+echo "4. automation during a release freeze, should allow the automation"
+start_ddb
+run_app lock apps --type freeze --duration 5m --allow automation
+run_app check apps/foo --type automation || exit 1
+
 # clean up
 stop_ddb
-echo "Done."
+echo "Done, all tests passed."
