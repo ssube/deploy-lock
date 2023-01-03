@@ -147,3 +147,11 @@ export function printLock(path: string, data: LockData): string {
     ...friendlyLinks,
   ].join(', ');
 }
+
+export function splitEmpty(val: string, delimiter = ','): Array<string> {
+  if (val.length === 0) {
+    return [];
+  }
+
+  return val.split(delimiter).map((it) => it.trim()).filter((it) => it.length > 0);
+}

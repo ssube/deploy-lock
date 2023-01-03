@@ -11,6 +11,7 @@ import {
 } from '@aws-sdk/client-dynamodb';
 
 import { LockCI, LockData, LockType } from '../lock.js';
+import { splitEmpty } from '../utils.js';
 import { Storage, StorageContext } from './index.js';
 
 export async function dynamoDelete(context: StorageContext, client: DynamoDBClient, path: string): Promise<LockData | undefined> {
@@ -226,7 +227,7 @@ export function lockFromAttributes(attributes: Record<string, AttributeValue>): 
     path: mustExist(attributes.path.S),
     author: mustExist(attributes.author.S),
     source: mustExist(attributes.source.S),
-    allow: mustExist(attributes.allow.S).split(',') as Array<LockType>,
+    allow: splitEmpty(mustExist(attributes.allow.S)) as Array<LockType>,
     created_at: parseInt(mustExist(attributes.created_at.N), 10),
     expires_at: parseInt(mustExist(attributes.expires_at.N), 10),
     updated_at: parseInt(mustExist(attributes.updated_at.N), 10),

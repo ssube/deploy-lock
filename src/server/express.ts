@@ -1,4 +1,4 @@
-import { doesExist, NotImplementedError } from '@apextoaster/js-utils';
+import { doesExist } from '@apextoaster/js-utils';
 import express, { Express, Request, Response } from 'express';
 
 import { APP_NAME } from '../args.js';
@@ -9,13 +9,16 @@ import { ServerContext } from './index.js';
 export const STATUS_ALLOWED = 200;
 export const STATUS_DENIED = 403;
 
-export function sendLocks(res: Response, locks: Array<LockData>, allow: boolean): void {
-  if (allow) {
+export function sendLocks(res: Response, locks: Array<LockData>, allowed: boolean): void {
+  if (allowed) {
     res.status(STATUS_ALLOWED);
   } else {
     res.status(STATUS_DENIED);
   }
-  res.json({ locks });
+  res.json({
+    allowed,
+    locks,
+  });
 }
 
 export async function expressIndex(context: ServerContext, app: Express, req: Request, res: Response): Promise<void> {
@@ -51,8 +54,8 @@ export async function expressCheck(context: ServerContext, req: Request, res: Re
   const lock = await context.storage.get(path);
   if (doesExist(lock)) {
     if (doesExist(req.query.type)) {
-      const allow = lock.allow.includes(req.query.type as LockType);
-      sendLocks(res, [ lock ], allow);
+      const allowed = lock.allow.includes(req.query.type as LockType);
+      sendLocks(res, [ lock ], allowed);
     } else {
       sendLocks(res, [ lock ], false);
     }
