@@ -1,21 +1,70 @@
-import { doesExist } from '@apextoaster/js-utils';
-import express, { Request, Response } from 'express';
+import { doesExist, NotImplementedError } from '@apextoaster/js-utils';
+import express, { Express, Request, Response } from 'express';
 
+import { APP_NAME } from '../args.js';
 import { ServerContext } from './index.js';
+
+export const STATUS_ALLOWED = 200;
+export const STATUS_DENIED = 403;
+
+export async function expressIndex(context: ServerContext, app: Express, req: Request, res: Response): Promise<void> {
+  // eslint-disable-next-line no-underscore-dangle
+  const routes = app._router.stack
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((r: any) => doesExist(r.route) && doesExist(r.route.path))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((r: any) => `${r.route.path} ${Object.keys(r.route.methods)}`);
+
+  res.send({
+    app: APP_NAME,
+    routes,
+  });
+}
+
+export async function expressCheck(context: ServerContext, req: Request, res: Response): Promise<void> {
+  const path = req.params[0];
+  context.logger.info({ path }, 'express check request');
+
+  const lock = await context.storage.get(path);
+  if (doesExist(lock)) {
+    res.json(lock).status(STATUS_DENIED).send();
+  } else {
+    res.sendStatus(STATUS_ALLOWED);
+  }
+}
+
+export async function expressList(context: ServerContext, req: Request, res: Response): Promise<void> {
+  context.logger.info('express list request');
+
+  const locks = await context.storage.list();
+  res.json(locks).status(STATUS_ALLOWED).send();
+}
+
+export async function expressLock(context: ServerContext, req: Request, res: Response): Promise<void> {
+  throw new NotImplementedError();
+}
+
+export async function expressPrune(context: ServerContext, req: Request, res: Response): Promise<void> {
+  throw new NotImplementedError();
+}
+
+export async function expressUnlock(context: ServerContext, req: Request, res: Response): Promise<void> {
+  throw new NotImplementedError();
+}
 
 export function expressListen(context: ServerContext) {
   const { args, logger } = context;
 
   const app = express();
 
-  const hello = (req: Request, res: Response) => res.send('Hello world! ' + req.params[0]);
-  app.get('/', hello);
-  app.get('/admission', hello);
-  app.get('/locks', hello);
-  app.delete('/locks', hello);
-  app.get('/locks/*', hello);
-  app.put('/locks/*', hello);
-  app.delete('/locks/*', hello);
+  app.get('/', (req, res) => expressIndex(context, app, req, res));
+  app.get('/admission', (req, res) => expressIndex(context, app, req, res));
+  app.get('/locks', (req, res) => expressList(context, req, res));
+  // should /locks have a POST for create?
+  app.delete('/locks', (req, res) => expressPrune(context, req, res));
+  app.get('/locks/*', (req, res) => expressCheck(context, req, res));
+  app.put('/locks/*', (req, res) => expressLock(context, req, res));
+  app.delete('/locks/*', (req, res) => expressUnlock(context, req, res));
 
   const server = app.listen(args.listen, () => {
     logger.info('API server listening');
