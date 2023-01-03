@@ -7,13 +7,24 @@ ddb_table=locks
 ddb_cid="$(mktemp --dry-run /tmp/deploy-lock-e2e-ddb.XXXXXX)"
 
 function stop_ddb() {
-  podman stop --cidfile "${ddb_cid}" && rm -v "${ddb_cid}"
+  if [[ -f "${ddb_cid}" ]];
+  then
+    echo "Stopping existing DDB..."
+    podman stop --cidfile "${ddb_cid}" && rm -v "${ddb_cid}"
+  fi
 }
 
 function start_ddb() {
   echo "Starting DDB..."
   stop_ddb
-  podman run --cidfile "${ddb_cid}" --name deploy-lock-e2e-ddb --replace --rm -d -p 8000:${ddb_port} docker.io/amazon/dynamodb-local
+  podman run \
+    --cidfile "${ddb_cid}" \
+    --name deploy-lock-e2e-ddb \
+    --replace \
+    --rm \
+    -d \
+    -p 8000:${ddb_port} \
+    docker.io/amazon/dynamodb-local
 
   while ! nc -z localhost ${ddb_port}; do
     sleep 1
@@ -31,30 +42,33 @@ function start_ddb() {
 }
 
 function run_app() {
-  echo "Running with args: $@"
+  echo "Running app with args: $@"
+
   node out/src/index.js \
     --storage dynamo \
     --table locks \
     --endpoint http://localhost:${ddb_port} \
     --source test/e2e \
     $@
+
+  return $?
 }
 
 # scenarios:
 echo "1. automation lock before deploy"
 start_ddb
 run_app lock apps --type automation --duration 5m
-run_app check apps/foo --type deploy
+run_app check apps/foo --type deploy && exit 1
 
 echo "2. incident lock before deploy"
 start_ddb
 run_app lock apps --type incident --duration 5m
-run_app check apps/foo --type deploy
+run_app check apps/foo --type deploy && exit 1
 
 echo "3. duplicate deploys"
 start_ddb
 run_app lock apps --type deploy --duration 5m
-run_app check apps/bar --type deploy
+run_app check apps/bar --type deploy && exit 1
 
 # clean up
 stop_ddb
