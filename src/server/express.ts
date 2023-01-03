@@ -10,13 +10,12 @@ export const STATUS_ALLOWED = 200;
 export const STATUS_DENIED = 403;
 
 export function sendLocks(res: Response, locks: Array<LockData>, allow: boolean): void {
-  res.json({ locks });
   if (allow) {
     res.status(STATUS_ALLOWED);
   } else {
     res.status(STATUS_DENIED);
   }
-  res.send();
+  res.json({ locks });
 }
 
 export async function expressIndex(context: ServerContext, app: Express, req: Request, res: Response): Promise<void> {
