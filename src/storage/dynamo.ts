@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 /* eslint-disable sonarjs/no-duplicate-string */
 import { doesExist, mustExist } from '@apextoaster/js-utils';
 import {
@@ -10,7 +11,7 @@ import {
 } from '@aws-sdk/client-dynamodb';
 
 import { ParsedArgs } from '../args.js';
-import { LockData } from '../lock.js';
+import { LockData, LockType } from '../lock.js';
 import { buildLock } from '../utils.js';
 import { Storage, StorageContext } from './index.js';
 
@@ -87,11 +88,8 @@ export async function dynamoSet(context: StorageContext, client: DynamoDBClient,
   const result = await client.send(command);
   logger.debug({ result }, 'got result from dynamo');
 
-  if (result.Attributes) {
-    return lockFromAttributes(args, result.Attributes);
-  } else {
-    throw new Error('no attributes in dynamo result');
-  }
+  // DDB PutItemCommand only recognizes ALL_OLD for ReturnValues, so it will never return the whole document
+  return data;
 }
 
 export async function dynamoConnect(context: StorageContext): Promise<Storage> {
@@ -122,11 +120,7 @@ export async function dynamoConnect(context: StorageContext): Promise<Storage> {
 export type LockKey = Record<'path', Record<'S', string>>;
 
 export function keyFromLock(lock: LockData): LockKey {
-  return {
-    path: {
-      S: lock.path,
-    },
-  };
+  return keyFromPath(lock.path);
 }
 
 export function keyFromPath(path: string): LockKey {
@@ -138,11 +132,41 @@ export function keyFromPath(path: string): LockKey {
 }
 
 export function attributesFromLock(lock: LockData): Record<string, AttributeValue> {
-  return keyFromLock(lock);
+  return {
+    type: {
+      S: lock.type,
+    },
+    path: {
+      S: lock.path,
+    },
+    author: {
+      S: lock.author,
+    },
+    // TODO: serialize links
+    created_at: {
+      N: lock.created_at.toFixed(0),
+    },
+    updated_at: {
+      N: lock.updated_at.toFixed(0),
+    },
+    expires_at: {
+      N: lock.expires_at.toFixed(0),
+    },
+    source: {
+      S: lock.source,
+    },
+    // TODO: serialize CI
+  };
 }
 
 export function lockFromAttributes(args: ParsedArgs, attributes: Record<string, AttributeValue>): LockData {
-  const lock = buildLock(args); // TODO: use actual attributes
+  const lock = buildLock(args); // TODO: start empty?
+  lock.type = mustExist(attributes.type.S) as LockType;
   lock.path = mustExist(attributes.path.S);
+  lock.author = mustExist(attributes.author.S);
+  lock.source = mustExist(attributes.source.S);
+  lock.created_at = parseInt(mustExist(attributes.created_at.N), 10);
+  lock.expires_at = parseInt(mustExist(attributes.expires_at.N), 10);
+  lock.updated_at = parseInt(mustExist(attributes.updated_at.N), 10);
   return lock;
 }
