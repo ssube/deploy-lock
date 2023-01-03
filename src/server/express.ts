@@ -132,6 +132,7 @@ export function expressListen(context: ServerContext) {
   app.get('/locks/*', (req, res) => expressCheck(context, req, res));
   app.put('/locks/*', (req, res) => expressLockPut(context, req, res));
   app.delete('/locks/*', (req, res) => expressUnlock(context, req, res));
+  app.get('/ok', (_req, res) => res.sendStatus(STATUS_ALLOWED));
 
   const server = app.listen(args.listen, () => {
     logger.info({ port: args.listen }, 'API server listening');

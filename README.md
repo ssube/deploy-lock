@@ -311,7 +311,7 @@ Friendly strings for `type`:
 - `--endpoint`
   - string, optional
   - DynamoDB endpoint
-  - set to `http://localhost:8000` for testing with https://hub.docker.com/r/amazon/dynamodb-local
+  - set to `http://localhost:8000` for testing with DynamoDB local
 - `--fake`
   - string, optional
   - a fake lock that should be added to the in-memory data store
@@ -333,16 +333,24 @@ Friendly strings for `type`:
 
 #### Endpoints
 
+- `/admission POST`
+  - Kubernetes admission controller webhook
 - `/locks GET`
   - equivalent to `deploy-lock list`
+- `/locks POST`
+  - equivalent to `deploy-lock lock`
+  - path taken from request body
 - `/locks DELETE`
   - equivalent to `deploy-lock prune`
 - `/locks/:path GET`
   - equivalent to `deploy-lock check`
 - `/locks/:path PUT`
   - equivalent to `deploy-lock lock`
+  - path taken from URL path
 - `/locks/:path DELETE`
   - equivalent to `deploy-lock unlock`
+- `/ok`
+  - health check
 
 ## Development
 
@@ -361,6 +369,8 @@ Friendly strings for `type`:
 4. Run the program's help with `make run-help` or `node out/src/index.js --help`
 
 ### Testing
+
+You can test locally without a real DDB table using https://hub.docker.com/r/amazon/dynamodb-local.
 
 1. Launch DynamoDB Local with `podman run --rm -p 8000:8000 docker.io/amazon/dynamodb-local`
 2. Create a profile with `aws configure --profile localddb`
