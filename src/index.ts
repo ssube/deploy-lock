@@ -2,12 +2,6 @@ import process from 'node:process';
 
 import { ExitCode, main } from './main.js';
 
-/**
- * A Discord chat bot for Conan Exiles game servers.
- *
- * @packageDocumentation
- */
-
 const ARGS_START = 2; // trim the first few, yargs does not like them
 
 /* c8 ignore start */

@@ -63,8 +63,30 @@ export async function expressList(context: ServerContext, req: Request, res: Res
   sendLocks(res, locks, true);
 }
 
-export async function expressLock(context: ServerContext, req: Request, res: Response): Promise<void> {
-  throw new NotImplementedError();
+export async function expressLock(context: ServerContext, req: Request, res: Response, path?: string): Promise<void> {
+  const lockData = req.body as LockData; // TODO: validate requests
+
+  if (doesExist(path)) {
+    lockData.path = path;
+  }
+
+  context.logger.info({ lock: lockData }, 'express lock request');
+
+  const existing = await context.storage.get(lockData.path);
+  if (doesExist(existing)) {
+    sendLocks(res, [ existing ], false);
+  } else {
+    const lock = await context.storage.set(lockData);
+    sendLocks(res, [ lock ], true);
+  }
+}
+
+export async function expressLockPost(context: ServerContext, req: Request, res: Response): Promise<void> {
+  return expressLock(context, req, res);
+}
+
+export async function expressLockPut(context: ServerContext, req: Request, res: Response): Promise<void> {
+  return expressLock(context, req, res, req.params[0]);
 }
 
 export async function expressPrune(context: ServerContext, req: Request, res: Response): Promise<void> {
@@ -72,7 +94,16 @@ export async function expressPrune(context: ServerContext, req: Request, res: Re
 }
 
 export async function expressUnlock(context: ServerContext, req: Request, res: Response): Promise<void> {
-  throw new NotImplementedError();
+  const path = req.params[0];
+  context.logger.info({ path }, 'express unlock request');
+
+  const existing = await context.storage.delete(path);
+  if (doesExist(existing)) {
+    sendLocks(res, [ existing ], true);
+  } else {
+    // TODO: should this return allow or deny?
+    sendLocks(res, [], true);
+  }
 }
 
 export function expressListen(context: ServerContext) {
@@ -85,14 +116,14 @@ export function expressListen(context: ServerContext) {
   app.get('/', (req, res) => expressIndex(context, app, req, res));
   app.post('/admission', (req, res) => expressAdmission(context, req, res));
   app.get('/locks', (req, res) => expressList(context, req, res));
-  // should /locks have a POST for create?
+  app.post('/locks', (req, res) => expressLockPost(context, req, res));
   app.delete('/locks', (req, res) => expressPrune(context, req, res));
   app.get('/locks/*', (req, res) => expressCheck(context, req, res));
-  app.put('/locks/*', (req, res) => expressLock(context, req, res));
+  app.put('/locks/*', (req, res) => expressLockPut(context, req, res));
   app.delete('/locks/*', (req, res) => expressUnlock(context, req, res));
 
   const server = app.listen(args.listen, () => {
-    logger.info('API server listening');
+    logger.info({ port: args.listen }, 'API server listening');
   });
 
   return {

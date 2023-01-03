@@ -10,9 +10,7 @@ import {
   ScanCommand,
 } from '@aws-sdk/client-dynamodb';
 
-import { ParsedArgs } from '../args.js';
 import { LockData, LockType } from '../lock.js';
-import { buildLock } from '../utils.js';
 import { Storage, StorageContext } from './index.js';
 
 export async function dynamoDelete(context: StorageContext, client: DynamoDBClient, path: string): Promise<LockData | undefined> {
