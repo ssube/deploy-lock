@@ -56,7 +56,7 @@ export function buildCache(context: StorageContext): Cache {
     const match = /^([-a-z/]+):({.+})$/.exec(lock);
     if (doesExist(match)) {
       const [_full, path, rawData] = Array.from(match);
-      const base = buildLock(context.args); // TODO: remove this?
+      const base = buildLock(context.args); // TODO: require full records?
       const data = JSON.parse(rawData) as LockData;
 
       context.logger.info({ path, data }, 'assuming lock exists');

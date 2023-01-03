@@ -399,3 +399,9 @@ Friendly strings for `type`:
       2. `incident` could allow `deploy`, but not `automation`
 7. Wildcards in paths?
    1. Probably no, it will become confusing pretty quickly, and KV stores do not support them consistently (or at all).
+8. Authz for API mutations?
+   1. If there is a REST API, it might need authn/authz.
+   2. Keeping the API private _could_ work.
+   3. Authorization should be scoped by path.
+9. How should the `AdmissionReview` fields be mapped to path?
+   1. This could vary by user and may need to be configurable.

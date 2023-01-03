@@ -44,7 +44,7 @@ export interface ParsedArgs {
   region: string;
   table: string;
   endpoint?: string;
-  fake: Array<string>; // TODO: keep this long-term?
+  fake: Array<string>;
 }
 
 export const APP_NAME = 'deploy-lock';

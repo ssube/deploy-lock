@@ -2,11 +2,22 @@ import { doesExist, NotImplementedError } from '@apextoaster/js-utils';
 import express, { Express, Request, Response } from 'express';
 
 import { APP_NAME } from '../args.js';
+import { LockData } from '../lock.js';
 import { AdmissionRequest, buildAdmissionResponse, getAdmissionPath } from './admission.js';
 import { ServerContext } from './index.js';
 
 export const STATUS_ALLOWED = 200;
 export const STATUS_DENIED = 403;
+
+export function sendLocks(res: Response, locks: Array<LockData>, allow: boolean): void {
+  res.json({ locks });
+  if (allow) {
+    res.status(STATUS_ALLOWED);
+  } else {
+    res.status(STATUS_DENIED);
+  }
+  res.send();
+}
 
 export async function expressIndex(context: ServerContext, app: Express, req: Request, res: Response): Promise<void> {
   // eslint-disable-next-line no-underscore-dangle
@@ -40,9 +51,9 @@ export async function expressCheck(context: ServerContext, req: Request, res: Re
 
   const lock = await context.storage.get(path);
   if (doesExist(lock)) {
-    res.json(lock).status(STATUS_DENIED).send();
+    sendLocks(res, [ lock ], false);
   } else {
-    res.sendStatus(STATUS_ALLOWED);
+    sendLocks(res, [], true);
   }
 }
 
@@ -50,7 +61,7 @@ export async function expressList(context: ServerContext, req: Request, res: Res
   context.logger.info('express list request');
 
   const locks = await context.storage.list();
-  res.json(locks).status(STATUS_ALLOWED).send();
+  sendLocks(res, locks, true);
 }
 
 export async function expressLock(context: ServerContext, req: Request, res: Response): Promise<void> {

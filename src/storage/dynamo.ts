@@ -142,7 +142,7 @@ export function attributesFromLock(lock: LockData): Record<string, AttributeValu
 }
 
 export function lockFromAttributes(args: ParsedArgs, attributes: Record<string, AttributeValue>): LockData {
-  const lock = buildLock(args); // TODO: remove
+  const lock = buildLock(args); // TODO: use actual attributes
   lock.path = mustExist(attributes.path.S);
   return lock;
 }
