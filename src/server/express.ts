@@ -41,7 +41,7 @@ export async function expressAdmission(context: ServerContext, req: Request, res
   const available = doesExist(lock) === false;
   const admission = buildAdmissionResponse(available, admissionRequest.request.uid);
   context.logger.debug({ available, admission }, 'responding to admission request');
-  res.json(admission).status(STATUS_ALLOWED).send();
+  res.status(STATUS_ALLOWED).json(admission);
 }
 
 export async function expressCheck(context: ServerContext, req: Request, res: Response): Promise<void> {
