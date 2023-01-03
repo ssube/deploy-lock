@@ -90,7 +90,18 @@ export async function expressLockPut(context: ServerContext, req: Request, res: 
 }
 
 export async function expressPrune(context: ServerContext, req: Request, res: Response): Promise<void> {
-  throw new NotImplementedError();
+  context.logger.info('express prune request');
+  const now = Date.now(); // TODO: Date needs to be injected to test this
+
+  const locks = await context.storage.list();
+  for (const lock of locks) {
+    if (lock.expires_at < now) {
+      context.logger.warn({ lock }, 'lock has expired');
+      await context.storage.delete(lock.path);
+    }
+  }
+
+  sendLocks(res, locks, true);
 }
 
 export async function expressUnlock(context: ServerContext, req: Request, res: Response): Promise<void> {
