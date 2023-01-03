@@ -10,7 +10,7 @@ import {
   ScanCommand,
 } from '@aws-sdk/client-dynamodb';
 
-import { LockData, LockType } from '../lock.js';
+import { LockCI, LockData, LockType } from '../lock.js';
 import { Storage, StorageContext } from './index.js';
 
 export async function dynamoDelete(context: StorageContext, client: DynamoDBClient, path: string): Promise<LockData | undefined> {
@@ -129,8 +129,43 @@ export function keyFromPath(path: string): LockKey {
   };
 }
 
-export function attributesFromLock(lock: LockData): Record<string, AttributeValue> {
+export function attributesFromCI(ci: LockCI): AttributeValue.MMember {
   return {
+    M: {
+      project: {
+        S: ci.project,
+      },
+      ref: {
+        S: ci.ref,
+      },
+      commit: {
+        S: ci.commit,
+      },
+      pipeline: {
+        S: ci.pipeline,
+      },
+      job: {
+        S: ci.job,
+      },
+    },
+  };
+}
+
+export function attributesFromLinks(links: Record<string, string>): AttributeValue.MMember {
+  const attributes: Record<string, AttributeValue.SMember> = {};
+  for (const key of Object.keys(links)) {
+    attributes[key] = {
+      S: links[key],
+    };
+  }
+
+  return {
+    M: attributes,
+  };
+}
+
+export function attributesFromLock(lock: LockData): Record<string, AttributeValue> {
+  const attributes: Record<string, AttributeValue> = {
     type: {
       S: lock.type,
     },
@@ -152,13 +187,38 @@ export function attributesFromLock(lock: LockData): Record<string, AttributeValu
     source: {
       S: lock.source,
     },
-    // TODO: serialize links
-    // TODO: serialize CI
+    links: attributesFromLinks(lock.links),
+  };
+
+  if (doesExist(lock.ci)) {
+    attributes.ci = attributesFromCI(lock.ci);
+  }
+
+  return attributes;
+}
+
+export function linksFromAttributes(attributes: Record<string, AttributeValue>): Record<string, string> {
+  const links: Record<string, string> = {};
+
+  for (const key of Object.keys(attributes)) {
+    links[key] = mustExist(attributes[key].S);
+  }
+
+  return links;
+}
+
+export function ciFromAttributes(attributes: Record<string, AttributeValue>): LockCI {
+  return {
+    project: mustExist(attributes.project.S),
+    ref: mustExist(attributes.ref.S),
+    commit: mustExist(attributes.commit.S),
+    pipeline: mustExist(attributes.pipeline.S),
+    job: mustExist(attributes.job.S),
   };
 }
 
 export function lockFromAttributes(attributes: Record<string, AttributeValue>): LockData {
-  return {
+  const lock: LockData = {
     type: mustExist(attributes.type.S) as LockType,
     path: mustExist(attributes.path.S),
     author: mustExist(attributes.author.S),
@@ -166,8 +226,12 @@ export function lockFromAttributes(attributes: Record<string, AttributeValue>): 
     created_at: parseInt(mustExist(attributes.created_at.N), 10),
     expires_at: parseInt(mustExist(attributes.expires_at.N), 10),
     updated_at: parseInt(mustExist(attributes.updated_at.N), 10),
-    // TODO: load links
-    // TODO: load ci
-    links: {},
+    links: linksFromAttributes(mustExist(attributes.links.M)),
   };
+
+  if (doesExist(attributes.ci)) {
+    lock.ci = ciFromAttributes(mustExist(attributes.ci.M));
+  }
+
+  return lock;
 }

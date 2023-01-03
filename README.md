@@ -374,7 +374,7 @@ You can test locally without a real DDB table using https://hub.docker.com/r/ama
 
 1. Launch DynamoDB Local with `podman run --rm -p 8000:8000 docker.io/amazon/dynamodb-local`
 2. Create a profile with `aws configure --profile localddb`
-   1. placeholder tokens (`foo` and `bar` is fine)
+   1. placeholder tokens
    2. us-east-1 region
    3. json output
 3. Create a `locks` table with `aws dynamodb --endpoint-url http://localhost:8000 --profile localddb create-table --attribute-definitions 'AttributeName=path,AttributeType=S' --table-name locks --key-schema 'AttributeName=path,KeyType=HASH' --billing-mode PAY_PER_REQUEST`
@@ -382,11 +382,12 @@ You can test locally without a real DDB table using https://hub.docker.com/r/ama
 
 ### TODOs
 
-1. Infer lock source from other arguments/CI variables
+1. Infer lock source from arguments/environment, like `CI_` variables
 2. SQL data store, with history (don't need to remove old records)
 3. S3 data store
-4. REST API with lock endpoints
-5. Kubernetes admission controller with webhook endpoint
+4. Kubernetes admission controller with configurable paths
+
+Other potential data stores could include: flat file, kubernetes configmap, etcd itself, consul, redis.
 
 ### Questions
 
@@ -428,3 +429,5 @@ You can test locally without a real DDB table using https://hub.docker.com/r/ama
    3. Authorization should be scoped by path.
 9. How should the `AdmissionReview` fields be mapped to path?
    1. This could vary by user and may need to be configurable.
+   2. Probably using an argument, `--admission-path`
+   3. Will eventually need to use jsonpath for access to `userInfo.groups` list or maps
