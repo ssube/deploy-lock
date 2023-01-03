@@ -2,7 +2,7 @@ import { doesExist, NotImplementedError } from '@apextoaster/js-utils';
 import express, { Express, Request, Response } from 'express';
 
 import { APP_NAME } from '../args.js';
-import { LockData } from '../lock.js';
+import { LockData, LockType } from '../lock.js';
 import { AdmissionRequest, buildAdmissionResponse, getAdmissionPath } from './admission.js';
 import { ServerContext } from './index.js';
 
@@ -50,7 +50,12 @@ export async function expressCheck(context: ServerContext, req: Request, res: Re
 
   const lock = await context.storage.get(path);
   if (doesExist(lock)) {
-    sendLocks(res, [ lock ], false);
+    if (doesExist(req.query.type)) {
+      const allow = lock.allow.includes(req.query.type as LockType);
+      sendLocks(res, [ lock ], allow);
+    } else {
+      sendLocks(res, [ lock ], false);
+    }
   } else {
     sendLocks(res, [], true);
   }
