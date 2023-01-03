@@ -62,8 +62,8 @@ export function getAdmissionPath(base: string, req: AdmissionRequest): string {
   const segments = [
     base,
     req.request.namespace,
-    req.request.requestResource.group,
-    req.request.requestResource.resource,
+    // req.request.requestResource.group,
+    // req.request.requestResource.resource,
     req.request.name,
   ];
   return segments.join('/');
