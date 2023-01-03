@@ -21,6 +21,7 @@ restarting pods during an infrastructure incident.
       - [Basic Options](#basic-options)
       - [Lock Data Options](#lock-data-options)
       - [Storage Backend Options](#storage-backend-options)
+      - [Admission Controller Options](#admission-controller-options)
     - [REST API](#rest-api)
       - [Endpoints](#endpoints)
   - [Development](#development)
@@ -315,6 +316,18 @@ Friendly strings for `type`:
   - string, optional
   - a fake lock that should be added to the in-memory data store
   - the in-memory data store always starts empty, this is the only way to have an existing lock
+
+#### Admission Controller Options
+
+- `--admission-base`
+  - string
+  - base path for admission controller requests
+  - usually the path to the cluster within the deploy path, like `aws/staging/us-east-1/apps/a`
+- `--admission-path`
+  - array, strings
+  - path keys to use when checking admission controller requests
+  - must be fields within the `AdmissionReview` kind
+  - usually something like `[namespace, name]` or `[namespace, requestResource.group, requestResource.resource, name]`
 
 ### REST API
 
