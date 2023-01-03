@@ -29,7 +29,7 @@ export async function dynamoDelete(context: StorageContext, client: DynamoDBClie
   logger.debug({ result }, 'got result from dynamo');
 
   if (doesExist(result.Attributes)) {
-    return lockFromAttributes(args, result.Attributes);
+    return lockFromAttributes(result.Attributes);
   }
 
   return undefined;
@@ -49,7 +49,7 @@ export async function dynamoGet(context: StorageContext, client: DynamoDBClient,
   logger.debug({ result }, 'got result from dynamo');
 
   if (doesExist(result.Item)) {
-    return lockFromAttributes(args, result.Item);
+    return lockFromAttributes(result.Item);
   }
 
   return undefined;
@@ -68,7 +68,7 @@ export async function dynamoList(context: StorageContext, client: DynamoDBClient
   logger.debug({ result }, 'got result from dynamo');
 
   if (doesExist(result.Items)) {
-    return result.Items.map((item) => lockFromAttributes(args, item));
+    return result.Items.map(lockFromAttributes);
   } else {
     return [];
   }
@@ -142,7 +142,6 @@ export function attributesFromLock(lock: LockData): Record<string, AttributeValu
     author: {
       S: lock.author,
     },
-    // TODO: serialize links
     created_at: {
       N: lock.created_at.toFixed(0),
     },
@@ -155,18 +154,22 @@ export function attributesFromLock(lock: LockData): Record<string, AttributeValu
     source: {
       S: lock.source,
     },
+    // TODO: serialize links
     // TODO: serialize CI
   };
 }
 
-export function lockFromAttributes(args: ParsedArgs, attributes: Record<string, AttributeValue>): LockData {
-  const lock = buildLock(args); // TODO: start empty?
-  lock.type = mustExist(attributes.type.S) as LockType;
-  lock.path = mustExist(attributes.path.S);
-  lock.author = mustExist(attributes.author.S);
-  lock.source = mustExist(attributes.source.S);
-  lock.created_at = parseInt(mustExist(attributes.created_at.N), 10);
-  lock.expires_at = parseInt(mustExist(attributes.expires_at.N), 10);
-  lock.updated_at = parseInt(mustExist(attributes.updated_at.N), 10);
-  return lock;
+export function lockFromAttributes(attributes: Record<string, AttributeValue>): LockData {
+  return {
+    type: mustExist(attributes.type.S) as LockType,
+    path: mustExist(attributes.path.S),
+    author: mustExist(attributes.author.S),
+    source: mustExist(attributes.source.S),
+    created_at: parseInt(mustExist(attributes.created_at.N), 10),
+    expires_at: parseInt(mustExist(attributes.expires_at.N), 10),
+    updated_at: parseInt(mustExist(attributes.updated_at.N), 10),
+    // TODO: load links
+    // TODO: load ci
+    links: {},
+  };
 }
