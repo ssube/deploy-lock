@@ -39,7 +39,7 @@ export interface ParsedArgs {
   'ci-pipeline'?: string;
   'ci-job'?: string;
 
-  listen?: number;
+  listen: number;
   storage: StorageType;
   region: string;
   table: string;
@@ -73,6 +73,9 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
     .command<CommandPath>('list <path>', 'list all locks', pathBuilder, () => {
       command = 'list';
     })
+    .command<CommandPath>('listen', 'listen on web API', pathBuilder, () => {
+      command = 'listen';
+    })
     .command<CommandPath>('lock <path>', 'lock a path', pathBuilder, () => {
       command = 'lock';
     })
@@ -104,6 +107,7 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       },
       'listen': {
         type: 'number',
+        default: 8000,
       },
       'now': {
         type: 'number',

@@ -2,6 +2,7 @@ import { doesExist, NotImplementedError } from '@apextoaster/js-utils';
 import express, { Express, Request, Response } from 'express';
 
 import { APP_NAME } from '../args.js';
+import { AdmissionRequest, buildAdmissionResponse, getAdmissionPath } from './admission.js';
 import { ServerContext } from './index.js';
 
 export const STATUS_ALLOWED = 200;
@@ -19,6 +20,18 @@ export async function expressIndex(context: ServerContext, app: Express, req: Re
     app: APP_NAME,
     routes,
   });
+}
+
+export async function expressAdmission(context: ServerContext, req: Request, res: Response): Promise<void> {
+  const admissionRequest = req.body as AdmissionRequest; // TODO: validate requests
+  const path = getAdmissionPath('kube', admissionRequest); // TODO: take admission base from context args
+  context.logger.info({ path }, 'express admission request');
+
+  const lock = await context.storage.get(path);
+  const available = doesExist(lock) === false;
+  const admission = buildAdmissionResponse(available, admissionRequest.request.uid);
+  context.logger.debug({ available, admission }, 'responding to admission request');
+  res.json(admission).status(STATUS_ALLOWED).send();
 }
 
 export async function expressCheck(context: ServerContext, req: Request, res: Response): Promise<void> {
@@ -57,8 +70,10 @@ export function expressListen(context: ServerContext) {
 
   const app = express();
 
+  app.use(express.json());
+
   app.get('/', (req, res) => expressIndex(context, app, req, res));
-  app.get('/admission', (req, res) => expressIndex(context, app, req, res));
+  app.post('/admission', (req, res) => expressAdmission(context, req, res));
   app.get('/locks', (req, res) => expressList(context, req, res));
   // should /locks have a POST for create?
   app.delete('/locks', (req, res) => expressPrune(context, req, res));

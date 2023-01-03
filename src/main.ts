@@ -1,14 +1,13 @@
-import { doesExist, signal, SIGNAL_RESET, SIGNAL_STOP } from '@apextoaster/js-utils';
 import { createLogger, DEBUG } from 'bunyan';
 
 import { APP_NAME, parseArgs } from './args.js';
 import { checkCommand } from './command/check.js';
 import { CommandFunction, CommandName } from './command/index.js';
 import { listCommand } from './command/list.js';
+import { listenCommand } from './command/listen.js';
 import { lockCommand } from './command/lock.js';
 import { pruneCommand } from './command/prune.js';
 import { unlockCommand } from './command/unlock.js';
-import { expressListen } from './server/express.js';
 import { dynamoConnect } from './storage/dynamo.js';
 import { StorageFactory, StorageType } from './storage/index.js';
 import { memoryConnect } from './storage/memory.js';
@@ -24,6 +23,7 @@ export enum ExitCode {
 export const Commands: Record<CommandName, CommandFunction> = {
   check: checkCommand,
   list: listCommand,
+  listen: listenCommand,
   lock: lockCommand,
   unlock: unlockCommand,
   prune: pruneCommand,
@@ -54,20 +54,13 @@ export async function main(argv: Array<string>): Promise<ExitCode> {
   const storageFactory = Storages[args.storage];
   const storage = await storageFactory({ args, logger });
 
-  if (doesExist(args.listen)) {
-    const api = expressListen({ args, logger, storage });
-    await signal(SIGNAL_RESET, SIGNAL_STOP);
-    await api.close();
+  const commandFunction = Commands[args.command];
+  const result = await commandFunction({ args, logger, storage });
+
+  if (result) {
     return ExitCode.SUCCESS;
   } else {
-    const commandFunction = Commands[args.command];
-    const result = await commandFunction({ args, logger, storage });
-
-    if (result) {
-      return ExitCode.SUCCESS;
-    } else {
-      logger.error({ command: args.command }, 'command failed');
-      return ExitCode.ERROR;
-    }
+    logger.error({ command: args.command }, 'command failed');
+    return ExitCode.ERROR;
   }
 }

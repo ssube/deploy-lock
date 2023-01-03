@@ -11,4 +11,4 @@ export interface CommandContext {
 
 export type CommandFunction = (context: CommandContext) => Promise<boolean>;
 
-export type CommandName = 'check' | 'list' | 'lock' | 'unlock' | 'prune';
+export type CommandName = 'check' | 'list' | 'listen' | 'lock' | 'unlock' | 'prune';
