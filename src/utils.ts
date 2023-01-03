@@ -90,17 +90,6 @@ export function buildLock(args: ParsedArgs, env = process.env): LockData {
   };
 }
 
-export function printLock(path: string, data: LockData): string {
-  const friendlyExpires = printTime(data.expires_at);
-  const friendlyType = LOCK_TYPES[data.type];
-
-  return `${path} is locked until ${friendlyExpires} by ${friendlyType} in ${data.source}`;
-}
-
-export function printTime(time: number): string {
-  return new Date(time * 1000).toLocaleString();
-}
-
 export function calculateExpires(args: ParsedArgs): number {
   if (doesExist(args.until)) {
     return parseTime(args.until);
@@ -136,4 +125,24 @@ export function parseTime(time: string): number {
   }
 
   throw new InvalidArgumentError('invalid time');
+}
+
+export function printLinks(links: Record<string, string>): Array<string> {
+  return Object.keys(links).map((name) => `${name}: ${links[name]}`);
+}
+
+export function printTime(time: number): string {
+  return new Date(time * 1000).toLocaleString();
+}
+
+export function printLock(path: string, data: LockData): string {
+  const friendlyExpires = printTime(data.expires_at);
+  const friendlyLinks = printLinks(data.links);
+  const friendlyType = LOCK_TYPES[data.type];
+
+  const base = `${path} is locked until ${friendlyExpires} by ${friendlyType} in ${data.source}`;
+  return [
+    base,
+    ...friendlyLinks,
+  ].join(', ');
 }
