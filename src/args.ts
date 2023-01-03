@@ -4,7 +4,7 @@ import yargs from 'yargs';
 import { CommandName } from './command/index.js';
 import { LOCK_TYPES, LockType } from './lock.js';
 import { STORAGE_TYPES, StorageType } from './storage/index.js';
-import { parseTime } from './utils.js';
+import { dateToSeconds, parseTime } from './utils.js';
 
 /**
  * CLI options.
@@ -24,16 +24,17 @@ export interface ParsedArgs {
    */
   help?: boolean;
 
-  type: LockType;
-  path: string;
-  author?: string;
+  // lock fields
   allow: Array<LockType>;
+  author?: string;
   duration?: string;
-  until?: string;
-  recursive: boolean;
   links: Array<string>;
   now: number;
+  path: string;
+  recursive: boolean;
   source: string;
+  type: LockType;
+  until?: string;
 
   'ci-project'?: string;
   'ci-ref'?: string;
@@ -41,12 +42,13 @@ export interface ParsedArgs {
   'ci-pipeline'?: string;
   'ci-job'?: string;
 
+  // storage options
+  endpoint?: string;
+  fake: Array<string>;
   listen: number;
   storage: StorageType;
   region: string;
   table: string;
-  endpoint?: string;
-  fake: Array<string>;
 }
 
 export const APP_NAME = 'deploy-lock';
@@ -120,8 +122,7 @@ export async function parseArgs(argv: Array<string>): Promise<ParsedArgs> {
       },
       'now': {
         type: 'string', // because of coerce, ends up as a number
-        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-        default: Math.round(Date.now() / 1000),
+        default: dateToSeconds(new Date()),
         coerce: parseTime,
       },
       'recursive': {

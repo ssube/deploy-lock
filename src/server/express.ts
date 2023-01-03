@@ -4,6 +4,7 @@ import express, { Express, Request, Response } from 'express';
 import { APP_NAME } from '../args.js';
 import { checkArgsPath } from '../command/check.js';
 import { LockData, LockType } from '../lock.js';
+import { dateToSeconds } from '../utils.js';
 import { AdmissionRequest, buildAdmissionResponse, getAdmissionPath } from './admission.js';
 import { ServerContext } from './index.js';
 
@@ -108,7 +109,7 @@ export async function expressLockPut(context: ServerContext, req: Request, res: 
 
 export async function expressPrune(context: ServerContext, req: Request, res: Response): Promise<void> {
   context.logger.info('express prune request');
-  const now = Date.now(); // TODO: Date needs to be injected to test this
+  const now = dateToSeconds(new Date()); // TODO: Date needs to be injected to test this
 
   const locks = await context.storage.list();
   for (const lock of locks) {

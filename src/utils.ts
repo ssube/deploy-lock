@@ -1,9 +1,14 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers */
 /* eslint-disable camelcase */
 import { doesExist, InvalidArgumentError, mustDefault } from '@apextoaster/js-utils';
 
 import { ParsedArgs } from './args.js';
 import { LOCK_TYPES, LockCI, LockData } from './lock.js';
+
+export const MILLIS_PER_SECOND = 1000;
+export const SECONDS_PER_MINUTE = 60;
+export const MINUTES_PER_HOUR = 60;
+export const HOURS_PER_DAY = 24;
+export const DAYS_PER_YEAR = 365;
 
 export function matchPath(baseStr: string, otherStr: string): boolean {
   const base = splitPath(baseStr);
@@ -106,12 +111,13 @@ export function calculateExpires(args: ParsedArgs): number {
 export const TIME_MULTIPLIERS: Array<[RegExp, number]> = [
   [/^(\d+)$/, 1], // integer seconds
   [/^(\d+)s$/, 1], // human seconds
-  [/^(\d+)m$/, 60], // human minutes
-  [/^(\d+)h$/, 60 * 60], // human hours
-  [/^(\d+)d$/, 60 * 60 * 24], // human days
+  [/^(\d+)m$/, SECONDS_PER_MINUTE], // human minutes
+  [/^(\d+)h$/, SECONDS_PER_MINUTE * MINUTES_PER_HOUR], // human hours
+  [/^(\d+)d$/, SECONDS_PER_MINUTE * MINUTES_PER_HOUR * HOURS_PER_DAY], // human days
+  [/^(\d+)y$/, SECONDS_PER_MINUTE * MINUTES_PER_HOUR * HOURS_PER_DAY * DAYS_PER_YEAR], // human years
 ];
 
-export const TIME_ISO_MATCH = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?$/;
+export const TIME_ISO_MATCH = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?/;
 
 /**
  * Convert a string of the form `12345` or `15m` into seconds.
@@ -122,7 +128,7 @@ export function parseTime(time: number | string): number {
   }
 
   if (TIME_ISO_MATCH.test(time)) {
-    return new Date(time).getTime() / 1000;
+    return dateToSeconds(new Date(time));
   }
 
   for (const [regex, mult] of TIME_MULTIPLIERS) {
@@ -141,7 +147,7 @@ export function printLinks(links: Record<string, string>): Array<string> {
 }
 
 export function printTime(time: number): string {
-  return new Date(time * 1000).toLocaleString();
+  return new Date(time * MILLIS_PER_SECOND).toLocaleString();
 }
 
 export function printLock(path: string, data: LockData): string {
@@ -162,4 +168,8 @@ export function splitEmpty(val: string, delimiter = ','): Array<string> {
   }
 
   return val.split(delimiter).map((it) => it.trim()).filter((it) => it.length > 0);
+}
+
+export function dateToSeconds(date: Date): number {
+  return Math.round(date.getTime() / MILLIS_PER_SECOND);
 }
